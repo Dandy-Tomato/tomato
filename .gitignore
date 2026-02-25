@@ -1,0 +1,79 @@
+################################
+# OS
+################################
+.DS_Store
+Thumbs.db
+
+################################
+# IDE (Global)
+################################
+.idea/
+.vscode/
+*.iws
+*.iml
+*.ipr
+out/
+
+################################
+# Gradle (Root 대비)
+################################
+.gradle/
+build/
+
+################################
+# Backend - Spring Boot
+################################
+backend/.gradle/
+backend/build/
+backend/bin/
+backend/out/
+backend/logs/
+
+# Keep Gradle Wrapper
+!backend/gradle/wrapper/gradle-wrapper.jar
+
+################################
+# Spring Boot Config (Secrets)
+################################
+backend/src/main/resources/application*.yml
+backend/src/main/resources/application*.properties
+
+################################
+# STS / Eclipse
+################################
+backend/.apt_generated/
+backend/.classpath
+backend/.factorypath
+backend/.project
+backend/.settings/
+backend/.springBeans
+backend/.sts4-cache/
+
+################################
+# AI - Python / FastAPI
+################################
+ai/__pycache__/
+ai/**/*.pyc
+ai/.venv/
+ai/venv/
+ai/.env
+ai/.env.*
+
+################################
+# Logs
+################################
+*.log
+logs/
+
+################################
+# Runtime / DB
+################################
+runtime/
+postgres-data/
+
+################################
+# Docker / Environment
+################################
+.env
+.env.*
+*.env
