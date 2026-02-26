@@ -12,42 +12,37 @@ Thumbs.db
 *.iws
 *.iml
 *.ipr
-out/
 
 ################################
-# Gradle (Root 대비)
+# Build outputs (Global)
 ################################
 .gradle/
 build/
+out/
+bin/
 
 ################################
-# Backend - Spring Boot
+# Logs
 ################################
-backend/.gradle/
-backend/build/
-backend/bin/
-backend/out/
-backend/logs/
-
-# Keep Gradle Wrapper
-!backend/gradle/wrapper/gradle-wrapper.jar
+*.log
+logs/
 
 ################################
-# Spring Boot Config (Secrets)
+# Backend - Spring Boot (Secrets)
 ################################
-backend/src/main/resources/application*.yml
-backend/src/main/resources/application*.properties
+backend/to-mato/src/main/resources/application*.yml
+backend/to-mato/src/main/resources/application*.properties
 
 ################################
 # STS / Eclipse
 ################################
-backend/.apt_generated/
-backend/.classpath
-backend/.factorypath
-backend/.project
-backend/.settings/
-backend/.springBeans
-backend/.sts4-cache/
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
 
 ################################
 # AI - Python / FastAPI
@@ -58,12 +53,6 @@ ai/.venv/
 ai/venv/
 ai/.env
 ai/.env.*
-
-################################
-# Logs
-################################
-*.log
-logs/
 
 ################################
 # Runtime / DB
@@ -77,3 +66,8 @@ postgres-data/
 .env
 .env.*
 *.env
+
+################################
+# Keep Gradle Wrapper
+################################
+!backend/to-mato/gradle/wrapper/gradle-wrapper.jar
