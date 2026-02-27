@@ -30,8 +30,8 @@ logs/
 ################################
 # Backend - Spring Boot (Secrets)
 ################################
-backend/to-mato/src/main/resources/application*.yml
-backend/to-mato/src/main/resources/application*.properties
+backend/src/main/resources/application*.yml
+backend/src/main/resources/application*.properties
 
 ################################
 # STS / Eclipse
@@ -70,4 +70,4 @@ postgres-data/
 ################################
 # Keep Gradle Wrapper
 ################################
-!backend/to-mato/gradle/wrapper/gradle-wrapper.jar
+!backend/gradle/wrapper/gradle-wrapper.jar
