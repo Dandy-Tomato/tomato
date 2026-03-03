@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLDelete;
 import site.to_mato.common.entity.SoftDeleteEntity;
 
 @Getter
@@ -16,6 +17,7 @@ import site.to_mato.common.entity.SoftDeleteEntity;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE user_id = ?")
 public class User extends SoftDeleteEntity {
 
     @Id

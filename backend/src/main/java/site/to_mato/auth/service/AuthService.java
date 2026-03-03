@@ -3,6 +3,7 @@ package site.to_mato.auth.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.auth.dto.request.LoginRequest;
 import site.to_mato.auth.dto.request.SignUpRequest;
 import site.to_mato.auth.dto.response.TokenResponse;
@@ -90,5 +91,17 @@ public class AuthService {
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) return;
         refreshTokenStore.delete(refreshToken);
+    }
+
+    @Transactional
+    public void signout(Long userId, String refreshToken) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            refreshTokenStore.delete(refreshToken);
+        }
+
+        user.softDelete();
     }
 }

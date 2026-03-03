@@ -2,6 +2,7 @@ package site.to_mato.auth.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import site.to_mato.auth.dto.request.LoginRequest;
 import site.to_mato.auth.dto.request.RefreshRequest;
@@ -36,6 +37,15 @@ public class AuthController {
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestBody @Valid RefreshRequest req) {
         authService.logout(req.refreshToken());
+        return ApiResponse.ok(null);
+    }
+
+    @DeleteMapping("/signout")
+    public ApiResponse<Void> signout(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody @Valid RefreshRequest req
+    ) {
+        authService.signout(userId, req.refreshToken());
         return ApiResponse.ok(null);
     }
 }
