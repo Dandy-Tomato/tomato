@@ -37,8 +37,8 @@ public class RefreshTokenStore {
     }
 
     public void rotate(String oldRefreshRaw, String newRefreshRaw, Long userId) {
-        delete(oldRefreshRaw);
         save(newRefreshRaw, userId);
+        delete(oldRefreshRaw);
     }
 
     private String key(String refreshRaw) {
