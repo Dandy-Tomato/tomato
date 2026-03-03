@@ -1,4 +1,4 @@
-package site.to_mato.common.security;
+package site.to_mato.common.security.jwt;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

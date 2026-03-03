@@ -1,4 +1,4 @@
-package site.to_mato.common.security;
+package site.to_mato.common.security.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
