@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+import site.to_mato.auth.service.RefreshTokenStore;
 import site.to_mato.common.security.jwt.JwtTokenProvider;
 
 import java.io.IOException;
@@ -19,8 +20,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtTokenProvider jwtTokenProvider;
     private final ObjectMapper objectMapper;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final RefreshTokenStore refreshTokenStore;
 
     @Override
     public void onAuthenticationSuccess(
@@ -33,6 +35,8 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
 
         String access = jwtTokenProvider.createAccessToken(principal.userId(), principal.role());
         String refresh = jwtTokenProvider.createRefreshToken(principal.userId());
+
+        refreshTokenStore.save(refresh, principal.userId());
 
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
