@@ -23,6 +23,10 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
 
+    public boolean isEmailAvailable(String email) {
+        return !userRepository.existsByEmail(email);
+    }
+
     public void signup(SignUpRequest req) {
         if (userRepository.existsByEmail(req.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_USER);
