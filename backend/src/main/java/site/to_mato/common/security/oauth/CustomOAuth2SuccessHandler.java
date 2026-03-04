@@ -1,6 +1,5 @@
 package site.to_mato.common.security.oauth;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -10,17 +9,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import site.to_mato.auth.service.RefreshTokenStore;
+import site.to_mato.common.security.jwt.JwtProperties;
 import site.to_mato.common.security.jwt.JwtTokenProvider;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
 public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final ObjectMapper objectMapper;
+    private final JwtProperties jwtProperties;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenStore refreshTokenStore;
 
@@ -41,9 +41,10 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
-        objectMapper.writeValue(response.getWriter(), Map.of(
-                "accessToken", access,
-                "refreshToken", refresh
-        ));
+        String redirectUrl = jwtProperties.frontCallbackUrl()
+                + "#accessToken=" + URLEncoder.encode(access, StandardCharsets.UTF_8)
+                + "&refreshToken=" + URLEncoder.encode(refresh, StandardCharsets.UTF_8);
+
+        getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

@@ -19,5 +19,7 @@ public record JwtProperties(
         @NotBlank
         String header,
         @NotBlank
-        String prefix
+        String prefix,
+        @NotBlank
+        String frontCallbackUrl
 ) {}
