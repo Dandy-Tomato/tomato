@@ -39,7 +39,7 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest req) {
-        User user = userRepository.findByEmail(req.email())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(req.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         if (user.getPassword() == null) {
