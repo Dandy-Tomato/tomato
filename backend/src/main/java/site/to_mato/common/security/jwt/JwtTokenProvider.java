@@ -92,17 +92,6 @@ public class JwtTokenProvider {
         return rawHeaderValue.substring(prefix.length()).trim();
     }
 
-    public Long getUserId(String token) {
-        Claims claims = parseClaims(token);
-        return Long.valueOf(claims.getSubject());
-    }
-
-    public Instant getExpiryInstant(String token) {
-        Claims claims = parseClaims(token);
-        Date exp = claims.getExpiration();
-        return exp.toInstant();
-    }
-
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(key)

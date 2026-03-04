@@ -17,9 +17,9 @@ import site.to_mato.user.repository.UserRepository;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenStore refreshTokenStore;
-    private final UserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
 
