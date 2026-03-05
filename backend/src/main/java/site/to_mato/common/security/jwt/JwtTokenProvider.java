@@ -1,4 +1,4 @@
-package site.to_mato.common.security;
+package site.to_mato.common.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

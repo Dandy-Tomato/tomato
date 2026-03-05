@@ -20,6 +20,10 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, 2000, "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, 2001, "접근 권한이 없습니다."),
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, 2002, "토큰이 만료되었습니다."),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, 2003, "이메일 또는 비밀번호가 올바르지 않습니다."),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, 2004, "리프레시 토큰이 유효하지 않습니다."),
+    REFRESH_TOKEN_REVOKED(HttpStatus.UNAUTHORIZED, 2005, "리프레시 토큰이 만료되었거나 폐기되었습니다."),
+    OAUTH_ONLY_ACCOUNT(HttpStatus.BAD_REQUEST, 2006, "소셜 로그인 계정입니다. 소셜 로그인을 이용해주세요."),
 
     // =========================
     // 3000: USER

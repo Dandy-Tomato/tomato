@@ -1,4 +1,4 @@
-package site.to_mato.common.security;
+package site.to_mato.common.security.jwt;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +9,6 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "jwt")
 public record JwtProperties(
-
         @NotBlank
         String secret,
         @NotNull
@@ -19,5 +18,7 @@ public record JwtProperties(
         @NotBlank
         String header,
         @NotBlank
-        String prefix
+        String prefix,
+        @NotBlank
+        String frontCallbackUrl
 ) {}

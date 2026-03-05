@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -13,10 +14,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import site.to_mato.common.security.CustomAccessDeniedHandler;
-import site.to_mato.common.security.CustomAuthenticationEntryPoint;
-import site.to_mato.common.security.JwtAuthenticationFilter;
-import site.to_mato.common.security.JwtProperties;
+import site.to_mato.common.security.handler.CustomAccessDeniedHandler;
+import site.to_mato.common.security.handler.CustomAuthenticationEntryPoint;
+import site.to_mato.common.security.jwt.JwtAuthenticationFilter;
+import site.to_mato.common.security.jwt.JwtProperties;
+import site.to_mato.common.security.oauth.CustomOAuth2SuccessHandler;
+import site.to_mato.common.security.oauth.CustomOAuth2UserService;
 
 @Configuration
 @EnableWebSecurity
@@ -28,10 +31,14 @@ public class SecurityConfig {
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private final CustomAccessDeniedHandler accessDeniedHandler;
 
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -41,8 +48,23 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(
+                                "/auth/check-email",
+                                "/auth/signup",
+                                "/auth/login",
+                                "/auth/refresh",
+                                "/oauth2/**",
+                                "/login/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/auth/logout",
+                                "/auth/signout"
+                        ).authenticated()
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
+                        .successHandler(customOAuth2SuccessHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
