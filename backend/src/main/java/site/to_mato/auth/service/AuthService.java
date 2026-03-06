@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.auth.dto.request.LoginRequest;
 import site.to_mato.auth.dto.request.SignUpRequest;
 import site.to_mato.auth.dto.response.TokenResponse;
+import site.to_mato.catalog.entity.Position;
+import site.to_mato.catalog.repository.PositionRepository;
 import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.security.jwt.JwtTokenProvider;
@@ -18,6 +20,7 @@ import site.to_mato.user.repository.UserRepository;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PositionRepository positionRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenStore refreshTokenStore;
 
@@ -34,7 +37,11 @@ public class AuthService {
 
         String encoded = passwordEncoder.encode(req.password());
 
-        User user = User.createLocal(req.email(), encoded, req.nickname());
+        Position position = positionRepository.findById(req.positionId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.POSITION_NOT_FOUND));
+
+        User user = User.createLocal(req.email(), encoded, req.nickname(), position);
+
         userRepository.save(user);
     }
 
