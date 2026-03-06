@@ -31,6 +31,9 @@ public class User extends SoftDeleteEntity {
     @Column(length = 50)
     private String nickname;
 
+    @Column(length = 255)
+    private String githubUsername;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Role role;
@@ -54,32 +57,28 @@ public class User extends SoftDeleteEntity {
     }
 
     // 일반 회원가입
-    public static User createLocal(String email, String encodedPassword, String nickname, Position position) {
+    public static User createLocal(String email, String encodedPassword) {
         return User.builder()
                 .email(email)
                 .password(encodedPassword)
-                .nickname(nickname)
                 .role(Role.ROLE_USER)
-                .isOnboarding(true)
-                .position(position)
+                .isOnboarding(false)
                 .build();
     }
 
     // OAuth 회원가입
-    public static User createOAuth(String email) {
+    public static User createSocial(String email) {
         return User.builder()
                 .email(email)
-                .password(null)
-                .nickname(null)
                 .role(Role.ROLE_USER)
                 .isOnboarding(false)
-                .position(null)
                 .build();
     }
 
     // 온보딩 완료
-    public void completeOnboarding(String nickname, Position position) {
+    public void updateProfile(String nickname, String githubUsername, Position position) {
         this.nickname = nickname;
+        this.githubUsername = githubUsername;
         this.position = position;
         this.isOnboarding = true;
     }

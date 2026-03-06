@@ -5,14 +5,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.auth.dto.request.LoginRequest;
+import site.to_mato.auth.dto.request.OnboardingRequest;
 import site.to_mato.auth.dto.request.SignUpRequest;
 import site.to_mato.auth.dto.response.TokenResponse;
 import site.to_mato.catalog.entity.Position;
 import site.to_mato.catalog.entity.Skill;
 import site.to_mato.catalog.repository.PositionRepository;
 import site.to_mato.catalog.repository.SkillRepository;
-import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.common.exception.BusinessException;
+import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.common.security.jwt.JwtTokenProvider;
 import site.to_mato.company.entity.Company;
 import site.to_mato.company.repository.CompanyRepository;
@@ -44,19 +45,34 @@ public class AuthService {
         return !userRepository.existsByEmail(email);
     }
 
+    @Transactional
     public void signup(SignUpRequest req) {
         if (userRepository.existsByEmail(req.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_USER);
         }
 
-        String encoded = passwordEncoder.encode(req.password());
+        String encodedPassword = passwordEncoder.encode(req.password());
+
+        User user = User.createLocal(req.email(), encodedPassword);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void updateProfile(Long userId, OnboardingRequest req) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Position position = positionRepository.findById(req.positionId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.POSITION_NOT_FOUND));
 
-        User user = User.createLocal(req.email(), encoded, req.nickname(), position);
+        user.updateProfile(
+                req.nickname(),
+                req.githubUsername(),
+                position
+        );
 
-        userRepository.save(user);
+        userDesiredCompanyRepository.deleteAllByUser(user);
+        userSkillRepository.deleteAllByUser(user);
 
         saveUserDesiredCompanies(user, req.companyIds());
         saveUserSkills(user, req.skillIds());
@@ -138,7 +154,11 @@ public class AuthService {
             return;
         }
 
-        List<Company> companies = companyRepository.findAllById(companyIds);
+        List<Long> distinctCompanyIds = companyIds.stream()
+                .distinct()
+                .toList();
+
+        List<Company> companies = companyRepository.findAllById(distinctCompanyIds);
 
         if (companies.size() != companyIds.size()) {
             throw new BusinessException(ErrorCode.COMPANY_NOT_FOUND);
@@ -156,7 +176,11 @@ public class AuthService {
             return;
         }
 
-        List<Skill> skills = skillRepository.findAllById(skillIds);
+        List<Long> distinctSkillIds = skillIds.stream()
+                .distinct()
+                .toList();
+
+        List<Skill> skills = skillRepository.findAllById(distinctSkillIds);
 
         if (skills.size() != skillIds.size()) {
             throw new BusinessException(ErrorCode.SKILL_NOT_FOUND);
