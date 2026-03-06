@@ -6,16 +6,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
+import site.to_mato.catalog.entity.Position;
 import site.to_mato.common.entity.SoftDeleteEntity;
+import site.to_mato.user.entity.enums.Role;
 
 @Getter
 @Entity
-@Table(
-        name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"provider", "provider_id"})
-        }
-)
+@Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE user_id = ?")
 public class User extends SoftDeleteEntity {
@@ -25,56 +22,65 @@ public class User extends SoftDeleteEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true)
+    @Column(unique = true, length = 255)
     private String email;
 
+    @Column(length = 255)
     private String password;
 
+    @Column(length = 50)
     private String nickname;
 
-    @Column(name = "provider", length = 20)
-    private String provider;
-
-    @Column(name = "provider_id", length = 100)
-    private String providerId;
-
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private Role role;
+
+    @Column(name = "is_onboarding", nullable = false)
+    private boolean isOnboarding;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "position_id")
+    private Position position;
 
     @Builder(access = AccessLevel.PRIVATE)
     private User(String email, String password, String nickname,
-                 String provider, String providerId, Role role) {
+                 Role role, boolean isOnboarding, Position position) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
-        this.provider = provider;
-        this.providerId = providerId;
         this.role = role;
+        this.isOnboarding = isOnboarding;
+        this.position = position;
     }
 
     // 일반 회원가입
-    public static User createLocal(String email, String encodedPassword, String nickname) {
+    public static User createLocal(String email, String encodedPassword, String nickname, Position position) {
         return User.builder()
                 .email(email)
                 .password(encodedPassword)
                 .nickname(nickname)
-                .provider("local")
-                .providerId(email)
                 .role(Role.ROLE_USER)
+                .isOnboarding(true)
+                .position(position)
                 .build();
     }
 
     // OAuth 회원가입
-    public static User createOAuth(String provider, String providerId,
-                                   String nickname, String email) {
+    public static User createOAuth(String email) {
         return User.builder()
                 .email(email)
                 .password(null)
-                .nickname(nickname)
-                .provider(provider)
-                .providerId(providerId)
+                .nickname(null)
                 .role(Role.ROLE_USER)
+                .isOnboarding(false)
+                .position(null)
                 .build();
+    }
+
+    // 온보딩 완료
+    public void completeOnboarding(String nickname, Position position) {
+        this.nickname = nickname;
+        this.position = position;
+        this.isOnboarding = true;
     }
 }
