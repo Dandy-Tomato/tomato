@@ -3,26 +3,33 @@ package site.to_mato.user.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.to_mato.common.security.oauth.dto.OAuthUserInfo;
+import site.to_mato.user.entity.OAuthAccount;
 import site.to_mato.user.entity.User;
+import site.to_mato.user.repository.OAuthAccountRepository;
 import site.to_mato.user.repository.UserRepository;
-
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class OAuthUserService {
 
     private final UserRepository userRepository;
+    private final OAuthAccountRepository oAuthAccountRepository;
 
     @Transactional
-    public User findOrCreate(String provider, Map<String, Object> attr) {
-        String providerId = String.valueOf(attr.get("id"));
-        String login = (String) attr.get("login");
-        String email = (String) attr.get("email");
-
-        return userRepository.findByProviderAndProviderId(provider, providerId)
-                .orElseGet(() -> userRepository.save(
-                        User.createOAuth(provider, providerId, login, email)
-                ));
+    public User findOrCreate(OAuthUserInfo userInfo) {
+        return oAuthAccountRepository
+                .findByProviderAndProviderUserId(userInfo.getProvider(), userInfo.getProviderUserId())
+                .map(OAuthAccount::getUser)
+                .orElseGet(() -> {
+                    User user = userRepository.save(User.createOAuth(userInfo.getEmail()));
+                    OAuthAccount oAuthAccount = OAuthAccount.create(
+                            user,
+                            userInfo.getProvider(),
+                            userInfo.getProviderUserId()
+                    );
+                    oAuthAccountRepository.save(oAuthAccount);
+                    return user;
+                });
     }
 }
