@@ -24,12 +24,16 @@ public enum ErrorCode {
     REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, 2004, "리프레시 토큰이 유효하지 않습니다."),
     REFRESH_TOKEN_REVOKED(HttpStatus.UNAUTHORIZED, 2005, "리프레시 토큰이 만료되었거나 폐기되었습니다."),
     OAUTH_ONLY_ACCOUNT(HttpStatus.BAD_REQUEST, 2006, "소셜 로그인 계정입니다. 소셜 로그인을 이용해주세요."),
+    OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, 2007, "지원하지 않는 OAuth Provider입니다."),
 
     // =========================
     // 3000: USER
     // =========================
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, 3000, "존재하지 않는 사용자입니다."),
     DUPLICATE_USER(HttpStatus.CONFLICT, 3001, "이미 존재하는 사용자입니다."),
+    POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, 3002, "존재하지 않는 직무입니다."),
+    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, 3003, "존재하지 않는 회사입니다."),
+    SKILL_NOT_FOUND(HttpStatus.NOT_FOUND, 3004, "존재하지 않는 기술 스택입니다."),
 
     // =========================
     // 4000: TEAM

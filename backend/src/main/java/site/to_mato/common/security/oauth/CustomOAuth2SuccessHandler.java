@@ -45,6 +45,9 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
                 + "#accessToken=" + URLEncoder.encode(access, StandardCharsets.UTF_8)
                 + "&refreshToken=" + URLEncoder.encode(refresh, StandardCharsets.UTF_8);
 
+        if (!principal.isOnboarding()) {
+            redirectUrl += "&isOnboarding=false";
+        }
         getRedirectStrategy().sendRedirect(request, response, redirectUrl);
     }
 }

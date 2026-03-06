@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import site.to_mato.auth.dto.request.LoginRequest;
+import site.to_mato.auth.dto.request.OnboardingRequest;
 import site.to_mato.auth.dto.request.RefreshRequest;
 import site.to_mato.auth.dto.request.SignUpRequest;
 import site.to_mato.auth.dto.response.EmailCheckResponse;
@@ -34,6 +35,15 @@ public class AuthController {
     @PostMapping("/signup")
     public ApiResponse<Void> signup(@RequestBody @Valid SignUpRequest req) {
         authService.signup(req);
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/onboarding")
+    public ApiResponse<Void> onboarding(
+            @AuthenticationPrincipal Long userId,
+            @RequestBody @Valid OnboardingRequest req
+    ) {
+        authService.updateProfile(userId, req);
         return ApiResponse.ok(null);
     }
 

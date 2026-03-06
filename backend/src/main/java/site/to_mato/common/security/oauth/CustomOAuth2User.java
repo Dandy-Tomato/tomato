@@ -11,11 +11,17 @@ import java.util.Map;
 public record CustomOAuth2User(
         Long userId,
         String role,
+        boolean isOnboarding,
         Map<String, Object> attributes
 ) implements OAuth2User {
 
-    public static CustomOAuth2User of(Long userId, String role, Map<String, Object> attributes) {
-        return new CustomOAuth2User(userId, role, attributes);
+    public static CustomOAuth2User of(
+            Long userId,
+            String role,
+            boolean isOnboarding,
+            Map<String, Object> attributes
+    ) {
+        return new CustomOAuth2User(userId, role, isOnboarding, attributes);
     }
 
     @Override
