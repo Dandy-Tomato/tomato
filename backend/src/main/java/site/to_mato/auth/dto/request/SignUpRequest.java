@@ -13,6 +13,6 @@ public record SignUpRequest(
         @NotBlank String nickname,
         String githubUsername,
         @NotNull Long positionId,
-        @NotEmpty List<Long> domainIds,
+        @NotEmpty List<Long> companyIds,
         @NotEmpty List<Long> skillIds
 ) {}

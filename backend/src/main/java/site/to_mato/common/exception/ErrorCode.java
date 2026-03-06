@@ -32,6 +32,8 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, 3000, "존재하지 않는 사용자입니다."),
     DUPLICATE_USER(HttpStatus.CONFLICT, 3001, "이미 존재하는 사용자입니다."),
     POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, 3002, "존재하지 않는 직무입니다."),
+    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, 3003, "존재하지 않는 회사입니다."),
+    SKILL_NOT_FOUND(HttpStatus.NOT_FOUND, 3004, "존재하지 않는 기술 스택입니다."),
 
     // =========================
     // 4000: TEAM
