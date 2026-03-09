@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './LoginPage';
 import CallbackPage from './CallbackPage';
 import MainPage from './MainPage';
-import OnboardingPage from './OnboardingPage';
+import SignupPage from './SignupPage';
 
 function App() {
     return (
@@ -12,7 +12,7 @@ function App() {
                     <Route path="/" element={<LoginPage />} />
                     <Route path="/oauth/callback" element={<CallbackPage />} />
                     <Route path="/main" element={<MainPage />} />
-                    <Route path="/onboarding" element={<OnboardingPage />} />
+                    <Route path="/signup" element={<SignupPage />} />
                 </Routes>
             </div>
         </Router>

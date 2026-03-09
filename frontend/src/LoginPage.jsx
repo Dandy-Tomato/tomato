@@ -170,7 +170,7 @@ const LoginPage = () => {
 
                         {/* 회원가입 안내 */}
                         <p className="signup-text">
-                            아직 계정이 없으신가요? <a href="#">무료로 시작하기</a>
+                            아직 계정이 없으신가요? <span className="signup-link" onClick={() => navigate('/signup')}>무료로 시작하기</span>
                         </p>
                     </div>
                 </div>

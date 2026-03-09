@@ -20,8 +20,8 @@ const CallbackPage = () => {
 
             // 사용자 상태에 따라 페이지 이동
             if (isOnboarding === "false") {
-                // 온보딩 필요 -> 추가 정보 입력 페이지 이동
-                navigate("/onboarding");
+                // 온보딩 필요 -> 통합된 SignupPage의 2단계로 이동
+                navigate("/signup?isSocial=true");
             } else {
                 // 온보딩 완료 -> 메인 페이지 이동
                 navigate("/main");
