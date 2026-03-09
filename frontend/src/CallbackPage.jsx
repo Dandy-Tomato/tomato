@@ -7,16 +7,21 @@ const CallbackPage = () => {
     useEffect(() => {
         // window.location.hash에서 파라미터 파싱 (#accessToken=...&refreshToken=...&isOnboarding=...)
         const hash = window.location.hash.substring(1);
-        const params = new URLSearchParams(hash);
+        console.log("Callback hash:", hash); // 디버깅용
 
+        const params = new URLSearchParams(hash);
         const accessToken = params.get("accessToken");
         const refreshToken = params.get("refreshToken");
         const isOnboarding = params.get("isOnboarding");
+
+        console.log("Parsed params:", { accessToken, refreshToken, isOnboarding }); // 디버깅용
 
         if (accessToken && refreshToken) {
             // 토큰 저장 (localStorage 또는 세션 관리 전략에 따라 변경 가능)
             localStorage.setItem("accessToken", accessToken);
             localStorage.setItem("refreshToken", refreshToken);
+
+            console.log("Tokens saved. Navigating based on isOnboarding:", isOnboarding);
 
             // 사용자 상태에 따라 페이지 이동
             if (isOnboarding === "false") {
@@ -29,7 +34,7 @@ const CallbackPage = () => {
         } else {
             // 토큰이 없는 경우 로그인 페이지로 리다이렉트 (에러 처리)
             console.error("Authentication failed: No tokens found in hash.");
-            navigate("/");
+            // navigate("/"); // 주석 처리하거나 개발 시에는 확인 가능하게 변경
         }
     }, [navigate]);
 

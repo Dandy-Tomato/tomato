@@ -123,20 +123,40 @@ const SignupPage = () => {
         if (!loginInfo.password || loginInfo.password !== loginInfo.confirmPassword) return alert('비밀번호가 일치하지 않습니다.');
 
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+            // 1. 회원가입 요청
+            const signupResponse = await fetch(`${API_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: loginInfo.email, password: loginInfo.password })
             });
-            if (response.ok) {
-                // Success: Automatic login simulation if needed, or just proceed
-                // We'll proceed to step 2
-                setStep(2);
+
+            if (signupResponse.ok) {
+                // 2. 가입 성공 시 자동 로그인하여 토큰 획득
+                try {
+                    const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: loginInfo.email, password: loginInfo.password })
+                    });
+                    const loginResult = await loginResponse.json();
+
+                    if (loginResponse.ok && loginResult.data) {
+                        localStorage.setItem("accessToken", loginResult.data.accessToken);
+                        localStorage.setItem("refreshToken", loginResult.data.refreshToken);
+                        setStep(2);
+                    } else {
+                        alert('자동 로그인에 실패했습니다. 다시 시도해 주세요.');
+                    }
+                } catch (loginError) {
+                    console.error('Auto login error:', loginError);
+                    alert('로그인 처리 중 오류가 발생했습니다.');
+                }
             } else {
-                const result = await response.json();
-                alert(result.message || '회원가입에 실패했습니다.');
+                const signupResult = await signupResponse.json();
+                alert(signupResult.message || '회원가입에 실패했습니다.');
             }
         } catch (error) {
+            console.error('Signup error:', error);
             alert('서버 연결 실패');
         }
     };
@@ -181,17 +201,19 @@ const SignupPage = () => {
 
     const handleFinalSubmit = async () => {
         if (!profile.nickname) return alert('닉네임을 입력해 주세요.');
-        if (!techStack.positionId) return alert('직무를 선택해 주세요.');
 
         const body = {
             nickname: profile.nickname,
-            githubUsername: profile.githubUsername,
-            positionId: techStack.positionId,
+            githubUsername: profile.githubUsername || null,
+            positionId: techStack.positionId || null,
             companyIds: profile.companies.map(c => c.id),
             skillIds: techStack.skills.map(s => s.id)
         };
 
         const token = localStorage.getItem("accessToken");
+        console.log("Onboarding Request - URL:", `${API_BASE_URL}/auth/onboarding`);
+        console.log("Onboarding Request - Body:", body);
+        console.log("Onboarding Request - Token:", token ? "Exists" : "Missing");
 
         try {
             const response = await fetch(`${API_BASE_URL}/auth/onboarding`, {
@@ -202,15 +224,20 @@ const SignupPage = () => {
                 },
                 body: JSON.stringify(body)
             });
+
+            const result = await response.json();
+            console.log("Onboarding Response - Status:", response.status);
+            console.log("Onboarding Response - Result:", result);
+
             if (response.ok) {
                 alert('서비스 가입이 모두 완료되었습니다!');
                 navigate('/main');
             } else {
-                const result = await response.json();
                 alert(result.message || '온보딩 정보 등록에 실패했습니다.');
             }
         } catch (error) {
-            alert('서버 연결 실패');
+            console.error('Onboarding submit error:', error);
+            alert('서버 연결 실패 또는 요청 처리 중 오류가 발생했습니다.');
         }
     };
 
