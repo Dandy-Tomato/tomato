@@ -45,7 +45,7 @@ public class OAuthAccount extends BaseEntity {
         this.providerUserId = providerUserId;
     }
 
-    public static OAuthAccount create(User user, OAuthProvider provider, String providerUserId) {
+    public static OAuthAccount of(User user, OAuthProvider provider, String providerUserId) {
         return OAuthAccount.builder()
                 .user(user)
                 .provider(provider)

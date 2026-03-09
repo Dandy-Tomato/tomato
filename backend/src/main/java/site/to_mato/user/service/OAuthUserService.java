@@ -23,7 +23,7 @@ public class OAuthUserService {
                 .map(OAuthAccount::getUser)
                 .orElseGet(() -> {
                     User user = userRepository.save(User.createSocial(userInfo.getEmail()));
-                    OAuthAccount oAuthAccount = OAuthAccount.create(
+                    OAuthAccount oAuthAccount = OAuthAccount.of(
                             user,
                             userInfo.getProvider(),
                             userInfo.getProviderUserId()
