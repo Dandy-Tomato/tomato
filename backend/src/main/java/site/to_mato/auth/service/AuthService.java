@@ -62,8 +62,11 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Position position = positionRepository.findById(req.positionId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.POSITION_NOT_FOUND));
+        Position position = null;
+        if (req.positionId() != null) {
+            position = positionRepository.findById(req.positionId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.POSITION_NOT_FOUND));
+        }
 
         user.updateProfile(
                 req.nickname(),
@@ -74,8 +77,13 @@ public class AuthService {
         userDesiredCompanyRepository.deleteAllByUser(user);
         userSkillRepository.deleteAllByUser(user);
 
-        saveUserDesiredCompanies(user, req.companyIds());
-        saveUserSkills(user, req.skillIds());
+        if (req.companyIds() != null && !req.companyIds().isEmpty()) {
+            saveUserDesiredCompanies(user, req.companyIds());
+        }
+
+        if (req.skillIds() != null && !req.skillIds().isEmpty()) {
+            saveUserSkills(user, req.skillIds());
+        }
     }
 
     public TokenResponse login(LoginRequest req) {
