@@ -1,12 +1,22 @@
-import React from 'react'
-import LoginPage from './LoginPage'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LoginPage from './LoginPage';
+import CallbackPage from './CallbackPage';
+import MainPage from './MainPage';
+import OnboardingPage from './OnboardingPage';
 
 function App() {
     return (
-        <div className="App">
-            <LoginPage />
-        </div>
-    )
+        <Router>
+            <div className="App">
+                <Routes>
+                    <Route path="/" element={<LoginPage />} />
+                    <Route path="/oauth/callback" element={<CallbackPage />} />
+                    <Route path="/main" element={<MainPage />} />
+                    <Route path="/onboarding" element={<OnboardingPage />} />
+                </Routes>
+            </div>
+        </Router>
+    );
 }
 
 export default App
