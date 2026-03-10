@@ -17,6 +17,23 @@ const ProfilePage = () => {
         skillIds: [],
         companyIds: []
     });
+    const [skillSearch, setSkillSearch] = useState('');
+    const [skillResults, setSkillResults] = useState([]);
+
+    useEffect(() => {
+        console.log("Skill search active. Input:", skillSearch, "Total SKILLS:", SKILLS.length);
+        if (skillSearch.trim()) {
+            const searchTerm = skillSearch.toLowerCase();
+            const filtered = SKILLS.filter(s =>
+                s.name.toLowerCase().includes(searchTerm) &&
+                !profile.skillIds.includes(s.id)
+            );
+            console.log("Filtered results:", filtered);
+            setSkillResults(filtered.slice(0, 10));
+        } else {
+            setSkillResults([]);
+        }
+    }, [skillSearch, profile.skillIds]);
 
     useEffect(() => {
         fetchProfile();
@@ -41,13 +58,27 @@ const ProfilePage = () => {
 
             if (response.ok && result.data) {
                 const data = result.data;
+
+                // 직무 ID 매핑 (Number로 강제 변환 및 dbName 매핑 지원)
+                let posId = null;
+                if (data.position) {
+                    if (typeof data.position === 'number') {
+                        posId = data.position;
+                    } else if (typeof data.position === 'string') {
+                        // "frontend", "backend" 등 dbName과 매칭 시도
+                        const found = POSITIONS.find(p => p.dbName === data.position || p.name === data.position || String(p.id) === data.position);
+                        if (found) posId = Number(found.id);
+                        else if (!isNaN(data.position)) posId = Number(data.position);
+                    }
+                }
+
                 setProfile({
                     email: data.email || '',
                     nickname: data.nickname || '',
                     githubUsername: data.githubUsername || '',
-                    positionId: data.position || null, // API에서는 position으로 옴
-                    skillIds: data.skillIds || [],
-                    companyIds: data.companyIds || []
+                    positionId: posId,
+                    skillIds: (data.skillIds || []).map(id => Number(id)),
+                    companyIds: (data.companyIds || []).map(id => Number(id))
                 });
                 if (data.nickname && data.nickname !== "null") {
                     localStorage.setItem('nickname', data.nickname);
@@ -66,13 +97,16 @@ const ProfilePage = () => {
 
     const handleSave = async () => {
         const token = localStorage.getItem("accessToken");
+
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
-            positionId: profile.positionId || null,
-            companyIds: profile.companyIds,
-            skillIds: profile.skillIds
+            positionId: profile.positionId ? Number(profile.positionId) : null,
+            companyIds: profile.companyIds.map(id => Number(id)),
+            skillIds: profile.skillIds.map(id => Number(id))
         };
+
+        console.log("Profile Save Body (Final - Spec Match):", body);
 
         try {
             const response = await fetch(`${API_BASE_URL}/auth/onboarding`, {
@@ -84,26 +118,40 @@ const ProfilePage = () => {
                 body: JSON.stringify(body)
             });
 
+            const result = await response.json();
+            console.log("Save Response Status:", response.status);
+            console.log("Save Response Data:", result);
+
             if (response.ok) {
                 alert("프로필이 수정되었습니다.");
                 setIsEditing(false);
                 fetchProfile(); // 최신 데이터 다시 불러오기
             } else {
-                const result = await response.json();
-                alert(result.message || "수정에 실패했습니다.");
+                // 에러 코드 3002(존재하지 않는 직무) 등의 상세 메시지 표시
+                const errorMsg = result.message || "수정에 실패했습니다.";
+                const errorCode = result.errorCode ? ` (에러 코드: ${result.errorCode})` : "";
+                alert(`${errorMsg}${errorCode}\n상태 코드: ${response.status}`);
+                console.error("Save failure details:", result);
             }
         } catch (error) {
             console.error("Error updating profile:", error);
-            alert("서버 오류가 발생했습니다.");
+            alert("서버 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.");
         }
     };
 
     if (loading) return <div className="loading">로딩 중...</div>;
 
     // ID를 이름으로 변환하는 도움 함수들
-    const getPositionName = (id) => POSITIONS.find(p => p.id === id)?.name || '없음';
-    const getSkillName = (id) => SKILLS.find(s => s.id === id)?.name || id;
-    const getCompanyName = (id) => DUMMY_COMPANIES.find(c => c.id === id)?.name || id;
+    const getPositionName = (id) => POSITIONS.find(p => p.id === Number(id))?.name || id || '없음';
+    const getSkillName = (id) => SKILLS.find(s => s.id === Number(id))?.name || id;
+    const getCompanyName = (id) => DUMMY_COMPANIES.find(c => c.id === Number(id))?.name || id;
+
+    const addSkill = (skill) => {
+        if (!profile.skillIds.includes(skill.id)) {
+            setProfile({ ...profile, skillIds: [...profile.skillIds, skill.id] });
+        }
+        setSkillSearch('');
+    };
 
     return (
         <div className="profile-page">
@@ -186,11 +234,84 @@ const ProfilePage = () => {
                         </div>
 
                         {isEditing && (
-                            <div className="skill-search">
+                            <div className="skill-search" style={{ position: 'relative', marginTop: '20px' }}>
                                 <p className="stack-label">보유한 기술 스택을 선택해주세요.</p>
-                                <div className="search-bar">
-                                    <input type="text" placeholder="검색어를 입력하세요." />
-                                    <button className="search-button">검색</button>
+                                <div className="search-bar" style={{ position: 'relative', display: 'flex', gap: '10px' }}>
+                                    <div className="search-input-wrapper" style={{ position: 'relative', flex: 1 }}>
+                                        <input
+                                            type="text"
+                                            placeholder="기술 스택 검색 (예: Java, React)"
+                                            value={skillSearch}
+                                            onChange={(e) => setSkillSearch(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                borderRadius: '8px',
+                                                border: '1px solid #ff6b6b',
+                                                fontSize: '14px',
+                                                boxSizing: 'border-box'
+                                            }}
+                                        />
+                                        {skillResults.length > 0 && (
+                                            <ul role="listbox" style={{
+                                                position: 'absolute',
+                                                top: '100%', // 입력창 바로 아래
+                                                left: 0,
+                                                right: 0,
+                                                backgroundColor: '#ffffff',
+                                                border: '2px solid #ff6b6b', // 확실히 보이게 경계 강화
+                                                borderRadius: '8px',
+                                                boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                                                zIndex: 99999, // 최상단 노출
+                                                maxHeight: '250px',
+                                                overflowY: 'auto',
+                                                padding: '0',
+                                                margin: '5px 0 0 0',
+                                                listStyle: 'none'
+                                            }}>
+                                                {skillResults.map(s => (
+                                                    <li
+                                                        key={s.id}
+                                                        role="option"
+                                                        onClick={() => {
+                                                            console.log("Skill selected:", s);
+                                                            addSkill(s);
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 15px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            borderBottom: '1px solid #eee',
+                                                            color: '#333',
+                                                            backgroundColor: '#fff'
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fff5f5'}
+                                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                                                    >
+                                                        {s.name}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                    <button
+                                        className="search-button"
+                                        style={{
+                                            padding: '0 15px',
+                                            backgroundColor: '#ff6b6b',
+                                            color: '#fff',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => {
+                                            if (skillResults.length > 0) {
+                                                addSkill(skillResults[0]);
+                                            } else {
+                                                alert("검색 결과가 없습니다. 목록에서 선택해 주세요.");
+                                            }
+                                        }}
+                                    >추가</button>
                                 </div>
                             </div>
                         )}

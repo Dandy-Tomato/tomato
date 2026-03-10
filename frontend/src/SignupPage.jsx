@@ -46,6 +46,18 @@ const SignupPage = () => {
         }
     }, [location]);
 
+    useEffect(() => {
+        if (skillSearch.trim()) {
+            const filtered = SKILLS.filter(s =>
+                s.name.toLowerCase().includes(skillSearch.toLowerCase()) &&
+                !techStack.skills.find(ts => ts.id === s.id)
+            );
+            setSkillResults(filtered.slice(0, 10));
+        } else {
+            setSkillResults([]);
+        }
+    }, [skillSearch, techStack.skills]);
+
     const handleLoginInputChange = (e) => {
         const { name, value } = e.target;
         setLoginInfo(prev => ({ ...prev, [name]: value }));
@@ -125,14 +137,18 @@ const SignupPage = () => {
 
     // Step 2 Handlers
     const addCompany = () => {
-        if (!companySearch) return;
-        const found = DUMMY_COMPANIES.find(c => c.name === companySearch);
-        if (found && !profile.companies.some(c => c.id === found.id)) {
-            setProfile(prev => ({ ...prev, companies: [...prev.companies, found] }));
-            setCompanySearch('');
-        } else if (!found) {
-            alert('검색된 기능이 없습니다. (현재 데모 데이터: 삼성, 네이버, 카카오 등)');
+        if (!companySearch.trim()) return;
+        // Check if the company is already added to prevent duplicates
+        if (profile.companies.some(c => c.name.toLowerCase() === companySearch.trim().toLowerCase())) {
+            alert('이미 추가된 기업입니다.');
+            return;
         }
+        const newId = Date.now(); // 임시 ID
+        setProfile(prev => ({
+            ...prev,
+            companies: [...prev.companies, { id: newId, name: companySearch.trim() }]
+        }));
+        setCompanySearch('');
     };
 
     const removeCompany = (id) => {
@@ -167,10 +183,12 @@ const SignupPage = () => {
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
-            positionId: techStack.positionId || null,
-            companyIds: profile.companies.map(c => c.id),
-            skillIds: techStack.skills.map(s => s.id)
+            positionId: techStack.positionId ? Number(techStack.positionId) : null,
+            companyIds: profile.companies.map(c => Number(c.id)),
+            skillIds: techStack.skills.map(s => Number(s.id))
         };
+
+        console.log("Onboarding Request Payload (Final - Spec Match):", body);
 
         const token = localStorage.getItem("accessToken");
         console.log("Onboarding Request - URL:", `${API_BASE_URL}/auth/onboarding`);
@@ -187,20 +205,23 @@ const SignupPage = () => {
                 body: JSON.stringify(body)
             });
 
-            const result = await response.json();
-            console.log("Onboarding Response - Status:", response.status);
-            console.log("Onboarding Response - Result:", result);
-
             if (response.ok) {
-                localStorage.setItem('nickname', profile.nickname);
-                alert('서비스 가입이 모두 완료되었습니다!');
+                const result = await response.json();
+                console.log("Onboarding Response - Result:", result);
+
+                alert('회원가입 및 프로필 설정이 완료되었습니다!');
+                if (profile.nickname) {
+                    localStorage.setItem('nickname', profile.nickname);
+                }
                 navigate('/main');
             } else {
-                alert(result.message || '온보딩 정보 등록에 실패했습니다.');
+                const result = await response.json();
+                console.error("Onboarding failed:", result);
+                alert(`${result.message || '프로필 설정에 실패했습니다.'} (코드: ${response.status})`);
             }
         } catch (error) {
             console.error('Onboarding submit error:', error);
-            alert('서버 연결 실패 또는 요청 처리 중 오류가 발생했습니다.');
+            alert('서버 오류가 발생했습니다. 다시 시도해 주세요.');
         }
     };
 
@@ -255,7 +276,7 @@ const SignupPage = () => {
                     <div className="input-wrapper">
                         <input type="text" placeholder="기업명을 입력해주세요." value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} />
                     </div>
-                    <button className="check-button" onClick={addCompany}>검색</button>
+                    <button className="check-button" onClick={addCompany}>추가</button>
                 </div>
                 <div className="tag-container">
                     {profile.companies.map(c => (
@@ -291,15 +312,56 @@ const SignupPage = () => {
             <div className="signup-form-group">
                 <label>보유한 기술 스택을 선택해주세요.</label>
                 <div className="input-with-button">
-                    <div className="input-wrapper relative">
-                        <input type="text" placeholder="검색어를 입력하세요." value={skillSearch} onChange={(e) => setSkillSearch(e.target.value)} />
+                    <div className="input-wrapper relative" style={{ flex: 1, position: 'relative' }}>
+                        <input
+                            type="text"
+                            placeholder="기술 스택 검색 (예: Java, React)"
+                            value={skillSearch}
+                            onChange={(e) => setSkillSearch(e.target.value)}
+                            style={{ width: '100%', padding: '12px', border: '2px solid #E57358', borderRadius: '8px' }}
+                        />
                         {skillResults.length > 0 && (
-                            <div className="search-results">
-                                {skillResults.map(s => <div key={s.id} className="result-item" onClick={() => addSkill(s)}>{s.name}</div>)}
-                            </div>
+                            <ul className="search-results" style={{
+                                position: 'absolute', top: '100%', left: 0, right: 0,
+                                backgroundColor: 'white', border: '2px solid #E57358', borderRadius: '10px',
+                                boxShadow: '0 10px 20px rgba(0,0,0,0.15)', zIndex: 99999,
+                                maxHeight: '250px', overflowY: 'auto', padding: '0', margin: '5px 0 0 0',
+                                listStyle: 'none'
+                            }}>
+                                {skillResults.map(s => (
+                                    <li
+                                        key={s.id}
+                                        className="result-item"
+                                        onClick={() => {
+                                            console.log("Signup Skill selected:", s);
+                                            addSkill(s);
+                                        }}
+                                        style={{
+                                            padding: '12px 18px',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #eee',
+                                            color: '#333',
+                                            backgroundColor: '#fff'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.backgroundColor = '#fff5f5'}
+                                        onMouseOut={(e) => e.target.style.backgroundColor = '#fff'}
+                                    >
+                                        {s.name}
+                                    </li>
+                                ))}
+                            </ul>
                         )}
                     </div>
-                    <button className="check-button">검색</button>
+                    <button
+                        className="check-button"
+                        onClick={() => {
+                            if (skillResults.length > 0) {
+                                addSkill(skillResults[0]);
+                            } else {
+                                alert("검색 결과가 없습니다. 목록에서 선택해 주세요.");
+                            }
+                        }}
+                    >추가</button>
                 </div>
                 <div className="tag-container">
                     {techStack.skills.map(s => (
