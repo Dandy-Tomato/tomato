@@ -58,43 +58,11 @@ public class ActionLogProcess extends BaseEntity {
         this.errorMessage = errorMessage;
     }
 
-    public static ActionLogProcess pending(ActionLog actionLog) {
+    public static ActionLogProcess of(ActionLog actionLog) {
         return ActionLogProcess.builder()
                 .actionLog(actionLog)
                 .status(ActionLogProcessStatus.PENDING)
                 .retryCount(0)
                 .build();
-    }
-
-    public void markProcessing() {
-        LocalDateTime now = LocalDateTime.now();
-        this.status = ActionLogProcessStatus.PROCESSING;
-        if (this.startedAt == null) {
-            this.startedAt = now;
-        }
-    }
-
-    public void markSuccess() {
-        LocalDateTime now = LocalDateTime.now();
-        this.status = ActionLogProcessStatus.SUCCESS;
-        if (this.startedAt == null) {
-            this.startedAt = now;
-        }
-        this.completedAt = now;
-        this.errorMessage = null;
-    }
-
-    public void markFailed(String errorMessage) {
-        LocalDateTime now = LocalDateTime.now();
-        this.status = ActionLogProcessStatus.FAILED;
-        if (this.startedAt == null) {
-            this.startedAt = now;
-        }
-        this.completedAt = now;
-        this.errorMessage = errorMessage;
-    }
-
-    public void increaseRetryCount() {
-        this.retryCount++;
     }
 }
