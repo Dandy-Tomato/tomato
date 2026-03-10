@@ -28,8 +28,22 @@ const CallbackPage = () => {
                 // 온보딩 필요 -> 통합된 SignupPage의 2단계로 이동
                 navigate("/signup?isSocial=true");
             } else {
-                // 온보딩 완료 -> 메인 페이지 이동
-                navigate("/main");
+                // 온보딩 완료 -> 프로필 정보를 가져와 닉네임 저장 후 메인 이동
+                const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+                fetch(`${API_BASE_URL}/users/profile`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                })
+                    .then(res => res.json())
+                    .then(result => {
+                        if (result.data && result.data.nickname && result.data.nickname !== "null") {
+                            localStorage.setItem("nickname", result.data.nickname);
+                        }
+                        navigate("/main");
+                    })
+                    .catch(err => {
+                        console.error("Failed to fetch profile in callback:", err);
+                        navigate("/main");
+                    });
             }
         } else {
             // 토큰이 없는 경우 로그인 페이지로 리다이렉트 (에러 처리)
