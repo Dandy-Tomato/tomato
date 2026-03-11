@@ -7,13 +7,14 @@ from sqlalchemy.orm import Session
 def count_effective_actions_by_project_id(
     db: Session,
     project_id: int,
+    action_types: list[str],
 ) -> int:
     sql = text(
         """
         SELECT COUNT(*)
         FROM action_logs al
         WHERE al.project_id = :project_id
-        AND al.action_type IN :action_types
+          AND al.action_type IN :action_types
         """
     ).bindparams(bindparam("action_types", expanding=True))
 
@@ -21,6 +22,7 @@ def count_effective_actions_by_project_id(
         sql,
         {
             "project_id": project_id,
+            "action_types": action_types,
         },
     ).scalar_one()
 
@@ -31,6 +33,7 @@ def find_recent_effective_action_logs_with_topic_embedding(
     db: Session,
     project_id: int,
     limit: int,
+    action_types: list[str],
 ) -> list[dict]:
     sql = text(
         """
@@ -50,13 +53,14 @@ def find_recent_effective_action_logs_with_topic_embedding(
         ORDER BY al.created_at DESC, al.action_log_id DESC
         LIMIT :limit
         """
-    ).bindparams(action_types=INITIALIZABLE_ACTION_TYPES)
+    ).bindparams(bindparam("action_types", expanding=True))
 
     rows = db.execute(
         sql,
         {
             "project_id": project_id,
             "limit": limit,
+            "action_types": action_types,
         },
     ).fetchall()
 

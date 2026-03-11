@@ -25,9 +25,10 @@ PREFERENCE_INIT_SAMPLE_SIZE = 3
 
 INITIALIZABLE_ACTION_TYPES = (
     ActionType.LIKE,
-    ActionType.BOOKMARK,
-    ActionType.DETAIL_VIEW,
     ActionType.DISLIKE,
+    ActionType.BOOKMARK,
+    ActionType.VIEW_DETAIL,
+    ActionType.VIEW_SPECIFICATION,
 )
 INITIALIZABLE_ACTION_TYPE_VALUES = [
     action_type.value for action_type in INITIALIZABLE_ACTION_TYPES
@@ -104,7 +105,7 @@ def update_preference_by_event(event: ActionLogEvent) -> None:
 
             if effective_action_count < PREFERENCE_INIT_THRESHOLD:
                 logger.info(
-                    "Preference embedding initialization skipped | project_id=%s action_log_id=%s effective_action_count=%s threshold=%s",
+                    "Preference embedding creation skipped | project_id=%s action_log_id=%s effective_action_count=%s threshold=%s",
                     event.project_id,
                     event.action_log_id,
                     effective_action_count,

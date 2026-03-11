@@ -5,7 +5,7 @@ from kafka import KafkaConsumer
 
 from app.common.errors import AppError
 from app.schemas.action_log_event import ActionLogEvent
-from app.services.preference_update_service import update_preference_by_event
+from app.services.action_log_process_service import process_action_log_event
 from app.settings import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -38,17 +38,19 @@ def run_consumer() -> None:
             try:
                 event = ActionLogEvent.model_validate(message.value)
 
-                update_preference_by_event(event)
+                should_commit = process_action_log_event(event)
 
-                logger.info(
-                    "Received event | action_log_id=%s project_id=%s topic_id=%s action_type=%s",
-                    event.action_log_id,
-                    event.project_id,
-                    event.topic_id,
-                    event.action_type.value,
-                )
-
-                consumer.commit()
+                if should_commit:
+                    consumer.commit()
+                    logger.info(
+                        "Kafka offset committed | action_log_id=%s",
+                        event.action_log_id,
+                    )
+                else:
+                    logger.info(
+                        "Kafka offset not committed for retry | action_log_id=%s",
+                        event.action_log_id,
+                    )
 
             except AppError as e:
                 logger.error(
@@ -59,7 +61,10 @@ def run_consumer() -> None:
                 )
 
             except Exception as e:
-                logger.exception("Failed to process recommendation event: %s", e)
+                logger.exception(
+                    "Failed to process recommendation event: %s",
+                    e,
+                )
 
     except KeyboardInterrupt:
         logger.info("Recommendation event consumer stopped.")
