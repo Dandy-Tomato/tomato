@@ -3,10 +3,10 @@ import logging
 
 from kafka import KafkaConsumer
 
+from app.common.errors import AppError
 from app.schemas.action_log_event import ActionLogEvent
-from app.services.weight_policy import get_action_weight
+from app.services.preference_update_service import update_preference_by_event
 from app.settings import settings
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,23 +36,27 @@ def run_consumer() -> None:
     try:
         for message in consumer:
             try:
-                # Kafka 메시지를 Pydantic schema로 검증
                 event = ActionLogEvent.model_validate(message.value)
 
-                # action type → weight 변환
-                weight = get_action_weight(event.action_type)
+                update_preference_by_event(event)
 
                 logger.info(
-                    "Received event | action_log_id=%s project_id=%s topic_id=%s action_type=%s weight=%s",
+                    "Received event | action_log_id=%s project_id=%s topic_id=%s action_type=%s",
                     event.action_log_id,
                     event.project_id,
                     event.topic_id,
                     event.action_type.value,
-                    weight,
                 )
 
-                # 정상 처리 시 offset commit
                 consumer.commit()
+
+            except AppError as e:
+                logger.error(
+                    "Failed to process recommendation event | code=%s detail=%s meta=%s",
+                    e.code,
+                    e.detail,
+                    e.meta,
+                )
 
             except Exception as e:
                 logger.exception("Failed to process recommendation event: %s", e)
