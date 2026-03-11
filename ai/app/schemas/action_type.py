@@ -1,0 +1,10 @@
+from enum import Enum
+
+
+class ActionType(str, Enum):
+    IMPRESSION = "IMPRESSION"
+    LIKE = "LIKE"
+    DISLIKE = "DISLIKE"
+    BOOKMARK = "BOOKMARK"
+    VIEW_DETAIL = "VIEW_DETAIL"
+    VIEW_SPECIFICATION = "VIEW_SPECIFICATION"
