@@ -16,16 +16,18 @@ import site.to_mato.topic.entity.enums.Reaction;
 import site.to_mato.topic.repository.ProjectTopicReactionRepository;
 import site.to_mato.topic.repository.TopicRepository;
 
+import java.util.Objects;
+
 @Service
 @RequiredArgsConstructor
 public class TopicActionService {
 
-    private final ProjectTopicReactionRepository reactionRepository;
-    private final ProjectRepository projectRepository;
     private final TopicRepository topicRepository;
+    private final ProjectRepository projectRepository;
+    private final ProjectTopicReactionRepository reactionRepository;
 
     @Transactional
-    public void react(Long projectId, Long topicId, Reaction reaction) {
+    public void react(Long projectId, Long topicId, Reaction reaction, Long version) {
 
         ProjectTopicReaction reactionEntity =
                 reactionRepository
@@ -33,8 +35,17 @@ public class TopicActionService {
                         .orElse(null);
         try {
             if (reactionEntity == null) {
+                // 기존(DB)에 데이터가 없는데 클라이언트가 버전을 보내온 경우 충돌(이미 삭제됨)
+                if (version != null) {
+                    throw new BusinessException(ErrorCode.REACTION_CONFLICT);
+                }
                 createReaction(projectId, topicId, reaction);
                 return;
+            }
+
+            // 클라이언트에서 보낸 버전이 기존 버전(DB)과 다를 경우 충돌 발생(다른 누군가 상태 변경)
+            if (!Objects.equals(reactionEntity.getVersion(), version)) {
+                throw new BusinessException(ErrorCode.REACTION_CONFLICT);
             }
 
             if (reactionEntity.getReaction() == reaction) {

@@ -19,7 +19,7 @@ public class TopicActionController {
             @PathVariable Long topicId,
             @RequestBody ReactionRequest request
     ) {
-        topicActionService.react(projectId, topicId, request.reaction());
+        topicActionService.react(projectId, topicId, request.reaction(), request.version());
         return ApiResponse.ok(null);
     }
 

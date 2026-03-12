@@ -6,6 +6,7 @@ import site.to_mato.topic.entity.enums.Reaction;
 public record ReactionRequest(
 
         @NotNull
-        Reaction reaction
+        Reaction reaction,
+        Long version
 
 ) {}
