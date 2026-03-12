@@ -3,48 +3,44 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.utils.vector_utils import to_pgvector_literal
 
-
-def find_preference_embedding_by_project_id(
+def find_project_preference_state_by_project_id(
     db: Session,
-    project_id: int,
-) -> list[float] | None:
-    sql = text(
+    project_id: int
+) -> dict | None:
+    query = text(
         """
-        SELECT preference_embedding
+        SELECT preference_embedding, last_processed_action_log_id
         FROM projects
         WHERE project_id = :project_id
         """
     )
 
-    row = db.execute(sql, {"project_id": project_id}).fetchone()
-
-    if row is None:
-        return None
-
-    embedding = row[0]
-    return list(embedding) if embedding is not None else None
+    row = db.execute(query, {"project_id": project_id}).mappings().first()
+    return None if row is None else dict(row)
 
 
-def update_preference_embedding(
+def update_preference_state(
     db: Session,
     project_id: int,
     embedding: list[float],
+    last_processed_action_log_id: int,
 ) -> int:
-    sql = text(
+    query = text(
         """
         UPDATE projects
-        SET preference_embedding = CAST(:embedding AS vector)
+        SET preference_embedding = :embedding,
+            last_processed_action_log_id = :last_processed_action_log_id
         WHERE project_id = :project_id
         """
     )
 
     result = db.execute(
-        sql,
+        query,
         {
             "project_id": project_id,
-            "embedding": to_pgvector_literal(embedding),
+            "embedding": embedding,
+            "last_processed_action_log_id": last_processed_action_log_id,
         },
     )
     return result.rowcount

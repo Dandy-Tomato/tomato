@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import logging
 
@@ -5,6 +7,7 @@ from kafka import KafkaConsumer
 
 from app.common.errors import AppError
 from app.schemas.action_log_event import ActionLogEvent
+from app.schemas.commit_decision import CommitDecision
 from app.services.action_log_process_service import process_action_log_event
 from app.settings import settings
 
@@ -27,7 +30,7 @@ def run_consumer() -> None:
     consumer = create_consumer()
 
     logger.info(
-        "Recommendation event consumer started. topic=%s group=%s bootstrap=%s",
+        "Recommendation event consumer started | topic=%s group=%s bootstrap=%s",
         settings.KAFKA_ACTION_LOG_TOPIC,
         settings.KAFKA_CONSUMER_GROUP,
         settings.KAFKA_BOOTSTRAP_SERVERS,
@@ -37,10 +40,9 @@ def run_consumer() -> None:
         for message in consumer:
             try:
                 event = ActionLogEvent.model_validate(message.value)
+                decision = process_action_log_event(event)
 
-                should_commit = process_action_log_event(event)
-
-                if should_commit:
+                if decision == CommitDecision.COMMIT:
                     consumer.commit()
                     logger.info(
                         "Kafka offset committed | action_log_id=%s",
@@ -60,16 +62,18 @@ def run_consumer() -> None:
                     e.meta,
                 )
 
-            except Exception as e:
+            except Exception:
                 logger.exception(
-                    "Failed to process recommendation event: %s",
-                    e,
+                    "Unexpected error while processing recommendation event | raw_message=%s",
+                    message.value,
                 )
 
     except KeyboardInterrupt:
-        logger.info("Recommendation event consumer stopped.")
+        logger.info("Recommendation event consumer stopped by keyboard interrupt.")
+
     finally:
         consumer.close()
+        logger.info("Recommendation event consumer closed.")
 
 
 if __name__ == "__main__":

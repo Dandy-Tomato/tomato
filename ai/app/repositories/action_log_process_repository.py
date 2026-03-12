@@ -43,6 +43,7 @@ def mark_action_log_processing(
         SET status = 'PROCESSING',
             updated_at = NOW()
         WHERE action_log_id = :action_log_id
+          AND status IN ('PENDING', 'FAILED')
         """
     )
 
