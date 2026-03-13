@@ -63,18 +63,30 @@
 import groovy.json.JsonOutput
 
 /*
- * GitLab 저장소 URL + 커밋 SHA로 커밋 링크 생성
+ * =========================
+ * Mattermost 알림용 헬퍼 함수
+ * =========================
+ */
+
+/*
+ * GitLab 저장소 URL과 커밋 SHA를 이용해서
+ * 커밋 상세 페이지 URL을 만듦
  */
 def buildGitCommitUrl(String gitUrl, String commitSha) {
     if (!gitUrl?.trim() || !commitSha?.trim()) {
         return ''
     }
-    def base = gitUrl.trim().replaceAll(/\\.git$/, '')
+
+    def base = gitUrl.trim().replaceAll(/\.git$/, '')
     return "${base}/-/commit/${commitSha}"
 }
 
 /*
- * 브랜치명 해석
+ * 알림용 브랜치명 해석
+ * 우선순위:
+ * 1) 미리 env에 캐시한 값
+ * 2) Jenkins 기본 환경변수
+ * 3) git 명령
  */
 def resolveBranch() {
     def cached = env.PIPELINE_BRANCH?.trim()
@@ -83,7 +95,7 @@ def resolveBranch() {
     if (env.BRANCH_NAME?.trim()) return env.BRANCH_NAME.trim()
 
     if (env.GIT_BRANCH?.trim()) {
-        return env.GIT_BRANCH.replaceFirst(/^.*\\//, '').trim()
+        return env.GIT_BRANCH.replaceFirst(/^.*\//, '').trim()
     }
 
     try {
@@ -98,7 +110,9 @@ def resolveBranch() {
 }
 
 /*
- * 푸셔/작성자 정보 해석
+ * 알림용 작성자/푸셔 정보 해석
+ * GitLab webhook 환경변수(GIT_PUSHER_USERNAME)가 있으면 우선 사용하고,
+ * 없으면 마지막 커밋 작성자를 사용
  */
 def resolvePusherMention() {
     def cached = env.PIPELINE_MENTION?.trim()
@@ -124,10 +138,10 @@ def resolvePusherMention() {
 }
 
 /*
- * Mattermost 알림 전송
+ * Mattermost 알림 전송 함수
  *
- * success=true  -> 성공 알림
- * success=false -> 실패 알림
+ * success = true  -> 성공 알림
+ * success = false -> 실패 알림
  *
  * info:
  * - mention
@@ -139,6 +153,10 @@ def resolvePusherMention() {
  * - commit.msg
  * - commit.url
  * - details
+ *
+ * 참고:
+ * - webhook 전송 실패가 전체 pipeline 실패로 이어지지 않게 `|| true` 처리
+ * - payload는 JSON 파일로 만든 뒤 curl로 전송
  */
 def sendMMNotify(boolean success, Map info) {
     def titleLine = success
@@ -147,11 +165,25 @@ def sendMMNotify(boolean success, Map info) {
 
     def lines = []
 
-    if (info.mention) lines << "**작성자**: ${info.mention}"
-    if (info.branch) lines << "**브랜치**: `${info.branch}`"
-    if (info.image) lines << "**이미지**: `${info.image}`"
-    if (info.server) lines << "**배포 서버**: `${info.server}`"
-    if (info.stage) lines << "**실패/현재 단계**: `${info.stage}`"
+    if (info.mention) {
+        lines << "**작성자**: ${info.mention}"
+    }
+
+    if (info.branch) {
+        lines << "**브랜치**: `${info.branch}`"
+    }
+
+    if (info.image) {
+        lines << "**이미지**: `${info.image}`"
+    }
+
+    if (info.server) {
+        lines << "**배포 서버**: `${info.server}`"
+    }
+
+    if (info.stage) {
+        lines << "**실패/현재 단계**: `${info.stage}`"
+    }
 
     if (info.commit?.msg) {
         def commitLine = info.commit?.url
@@ -170,6 +202,7 @@ def sendMMNotify(boolean success, Map info) {
 
     def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
 
+    // Mattermost로 보낼 payload 생성
     writeFile(
         file: 'payload.json',
         text: JsonOutput.toJson([
@@ -210,13 +243,17 @@ pipeline {
         COMPOSE_FILE    = 'docker-compose.prod.yml'
 
         HEALTHCHECK_URL = 'http://localhost:8080/health'
+
+        // 실패 알림에서 "어느 단계에서 실패했는지" 보이기 위해 사용
         LAST_STAGE      = 'START'
     }
 
     stages {
         stage('Check Build Environment') {
             steps {
-                script { env.LAST_STAGE = 'Check Build Environment' }
+                script {
+                    env.LAST_STAGE = 'Check Build Environment'
+                }
                 sh '''
                     set -eux
                     whoami
@@ -232,7 +269,9 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                script { env.LAST_STAGE = 'Checkout' }
+                script {
+                    env.LAST_STAGE = 'Checkout'
+                }
                 deleteDir()
                 checkout([
                     $class: 'GitSCM',
@@ -250,6 +289,7 @@ pipeline {
                 script {
                     env.LAST_STAGE = 'Collect Build Metadata'
 
+                    // Mattermost 알림에서 쓸 메타데이터를 미리 수집
                     env.PIPELINE_BRANCH = sh(
                         script: "git rev-parse --abbrev-ref HEAD",
                         returnStdout: true
@@ -276,13 +316,20 @@ pipeline {
                     }
 
                     env.PIPELINE_COMMIT_URL = buildGitCommitUrl(env.GIT_URL, env.PIPELINE_COMMIT_SHA)
+
+                    echo "Collected metadata:"
+                    echo "- branch: ${env.PIPELINE_BRANCH}"
+                    echo "- commit: ${env.PIPELINE_COMMIT_SHA}"
+                    echo "- mention: ${env.PIPELINE_MENTION}"
                 }
             }
         }
 
         stage('Build Backend') {
             steps {
-                script { env.LAST_STAGE = 'Build Backend' }
+                script {
+                    env.LAST_STAGE = 'Build Backend'
+                }
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
@@ -297,6 +344,7 @@ org.gradle.java.installations.paths=/opt/java/openjdk
 EOF
 
                         chmod +x gradlew
+
                         ./gradlew clean bootJar -x test --no-daemon --stacktrace
 
                         test -d build/libs
@@ -308,7 +356,9 @@ EOF
 
         stage('Docker Build') {
             steps {
-                script { env.LAST_STAGE = 'Docker Build' }
+                script {
+                    env.LAST_STAGE = 'Docker Build'
+                }
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
@@ -326,7 +376,9 @@ EOF
 
         stage('Docker Push') {
             steps {
-                script { env.LAST_STAGE = 'Docker Push' }
+                script {
+                    env.LAST_STAGE = 'Docker Push'
+                }
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKERHUB_USERNAME',
@@ -345,12 +397,14 @@ EOF
 
         stage('Deploy to EC2') {
             steps {
-                script { env.LAST_STAGE = 'Deploy to EC2' }
+                script {
+                    env.LAST_STAGE = 'Deploy to EC2'
+                }
                 sshagent(credentials: ['ec2-prod-ssh']) {
-                    sh """
+                    sh("""
                         set -eux
 
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'EOF'
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
 cd ${DEPLOY_DIR}
 
 if [ ! -f .env ]; then
@@ -375,20 +429,22 @@ docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate backend
 
 echo '[INFO] Remove dangling images'
 docker image prune -f
-EOF
-                    """.stripIndent()
+REMOTE_SCRIPT
+                    """.stripIndent())
                 }
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                script { env.LAST_STAGE = 'Verify Deployment' }
+                script {
+                    env.LAST_STAGE = 'Verify Deployment'
+                }
                 sshagent(credentials: ['ec2-prod-ssh']) {
-                    sh """
+                    sh("""
                         set -eux
 
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'EOF'
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
 cd ${DEPLOY_DIR}
 
 echo '[INFO] Compose status'
@@ -402,33 +458,19 @@ curl -fsS ${HEALTHCHECK_URL}
 
 echo '[INFO] Backend recent logs'
 docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=100 backend
-EOF
-                    """.stripIndent()
+REMOTE_SCRIPT
+                    """.stripIndent())
                 }
             }
         }
-
-        stage('Verify Deployment') {
-            steps {
-                sshagent(credentials: ['ec2-prod-ssh']) {
-                    sh '''
-                        set -eux
-
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
-                            set -eux
-                            cd ${DEPLOY_DIR}
-                            docker compose -f ${COMPOSE_FILE} ps
-                            docker compose -f ${COMPOSE_FILE} logs --tail=100 backend
-                        "
-                    '''
-                }
-            }
-}
     }
 
     post {
         success {
             script {
+                /*
+                 * 성공 시 Mattermost로 보내는 정보
+                 */
                 def buildInfo = [
                     mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
                     branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
@@ -450,8 +492,8 @@ EOF
         failure {
             script {
                 /*
-                 * rawBuild.getLog() 는 현재 Jenkins 보안 정책에 막혀 있으므로 사용하지 않는다.
-                 * 대신 마지막으로 수행 중이던 stage 이름과 기본 메타데이터만 보낸다.
+                 * 실패 시 Mattermost로 보내는 정보
+                 * 마지막 수행 단계와 빌드 링크를 보내서 Mattermost에서 보고 바로 Jenkins 콘솔로 들어가도록 유도
                  */
                 def buildInfo = [
                     mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
@@ -464,7 +506,7 @@ EOF
                         msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
                         url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
                     ],
-                    details : "Jenkins Script Security 승인 없이 동작하도록 최근 콘솔 로그 첨부는 비활성화했습니다. 빌드 상세 링크에서 실패 원인을 확인하세요."
+                    details : "최근 콘솔 로그 자동 첨부는 Jenkins Script Security 승인 이슈 때문에 비활성화했습니다. 빌드 상세 링크에서 실패 원인을 확인하세요."
                 ]
 
                 echo 'CI/CD pipeline failed.'
