@@ -60,6 +60,135 @@
 //     }
 // }
 
+import groovy.json.JsonOutput
+
+/*
+ * GitLab 저장소 URL + 커밋 SHA로 커밋 링크 생성
+ */
+def buildGitCommitUrl(String gitUrl, String commitSha) {
+    if (!gitUrl?.trim() || !commitSha?.trim()) {
+        return ''
+    }
+    def base = gitUrl.trim().replaceAll(/\\.git$/, '')
+    return "${base}/-/commit/${commitSha}"
+}
+
+/*
+ * 브랜치명 해석
+ */
+def resolveBranch() {
+    def cached = env.PIPELINE_BRANCH?.trim()
+    if (cached) return cached
+
+    if (env.BRANCH_NAME?.trim()) return env.BRANCH_NAME.trim()
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^.*\\//, '').trim()
+    }
+
+    try {
+        if (fileExists('.git')) {
+            return sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+        }
+    } catch (Exception e) {
+        echo "⚠️ 브랜치 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'unknown'
+}
+
+/*
+ * 푸셔/작성자 정보 해석
+ */
+def resolvePusherMention() {
+    def cached = env.PIPELINE_MENTION?.trim()
+    if (cached) return cached
+
+    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+    if (pusher) {
+        return "@${pusher}"
+    }
+
+    try {
+        if (fileExists('.git')) {
+            return sh(
+                script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                returnStdout: true
+            ).trim()
+        }
+    } catch (Exception e) {
+        echo "⚠️ 작성자 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'Unknown'
+}
+
+/*
+ * Mattermost 알림 전송
+ *
+ * success=true  -> 성공 알림
+ * success=false -> 실패 알림
+ *
+ * info:
+ * - mention
+ * - branch
+ * - buildUrl
+ * - image
+ * - server
+ * - stage
+ * - commit.msg
+ * - commit.url
+ * - details
+ */
+def sendMMNotify(boolean success, Map info) {
+    def titleLine = success
+        ? "## :jenkins1: 백엔드 CI/CD :_successs2: :happy_cat:"
+        : "## :jenkins5: 백엔드 CI/CD :sang_fail: :omgham:"
+
+    def lines = []
+
+    if (info.mention) lines << "**작성자**: ${info.mention}"
+    if (info.branch) lines << "**브랜치**: `${info.branch}`"
+    if (info.image) lines << "**이미지**: `${info.image}`"
+    if (info.server) lines << "**배포 서버**: `${info.server}`"
+    if (info.stage) lines << "**실패/현재 단계**: `${info.stage}`"
+
+    if (info.commit?.msg) {
+        def commitLine = info.commit?.url
+            ? "[${info.commit.msg}](${info.commit.url})"
+            : info.commit.msg
+        lines << "**커밋**: ${commitLine}"
+    }
+
+    if (info.buildUrl) {
+        lines << "**빌드 상세**: [Details](${info.buildUrl})"
+    }
+
+    if (!success && info.details) {
+        lines << "**추가 정보**:\n${info.details}"
+    }
+
+    def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
+
+    writeFile(
+        file: 'payload.json',
+        text: JsonOutput.toJson([
+            text      : text,
+            username  : "Jenkins",
+            icon_emoji: ":rocket:"
+        ])
+    )
+
+    withCredentials([string(credentialsId: 'mattermost-webhook', variable: 'MM_WEBHOOK')]) {
+        sh '''
+            curl -sS -f -X POST \
+              -H 'Content-Type: application/json' \
+              --data-binary @payload.json \
+              "$MM_WEBHOOK" || true
+        '''
+    }
+}
+
 pipeline {
     agent any
 
@@ -81,11 +210,13 @@ pipeline {
         COMPOSE_FILE    = 'docker-compose.prod.yml'
 
         HEALTHCHECK_URL = 'http://localhost:8080/health'
+        LAST_STAGE      = 'START'
     }
 
     stages {
         stage('Check Build Environment') {
             steps {
+                script { env.LAST_STAGE = 'Check Build Environment' }
                 sh '''
                     set -eux
                     whoami
@@ -101,6 +232,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                script { env.LAST_STAGE = 'Checkout' }
                 deleteDir()
                 checkout([
                     $class: 'GitSCM',
@@ -113,8 +245,44 @@ pipeline {
             }
         }
 
+        stage('Collect Build Metadata') {
+            steps {
+                script {
+                    env.LAST_STAGE = 'Collect Build Metadata'
+
+                    env.PIPELINE_BRANCH = sh(
+                        script: "git rev-parse --abbrev-ref HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    env.PIPELINE_COMMIT_SHA = sh(
+                        script: "git rev-parse HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    env.PIPELINE_COMMIT_MSG = sh(
+                        script: "git log -1 --pretty=%s",
+                        returnStdout: true
+                    ).trim()
+
+                    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+                    if (pusher) {
+                        env.PIPELINE_MENTION = "@${pusher}"
+                    } else {
+                        env.PIPELINE_MENTION = sh(
+                            script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    env.PIPELINE_COMMIT_URL = buildGitCommitUrl(env.GIT_URL, env.PIPELINE_COMMIT_SHA)
+                }
+            }
+        }
+
         stage('Build Backend') {
             steps {
+                script { env.LAST_STAGE = 'Build Backend' }
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
@@ -129,7 +297,6 @@ org.gradle.java.installations.paths=/opt/java/openjdk
 EOF
 
                         chmod +x gradlew
-
                         ./gradlew clean bootJar -x test --no-daemon --stacktrace
 
                         test -d build/libs
@@ -141,6 +308,7 @@ EOF
 
         stage('Docker Build') {
             steps {
+                script { env.LAST_STAGE = 'Docker Build' }
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
@@ -158,6 +326,7 @@ EOF
 
         stage('Docker Push') {
             steps {
+                script { env.LAST_STAGE = 'Docker Push' }
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKERHUB_USERNAME',
@@ -176,13 +345,12 @@ EOF
 
         stage('Deploy to EC2') {
             steps {
+                script { env.LAST_STAGE = 'Deploy to EC2' }
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh """
                         set -eux
 
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<EOF
-set -eux
-
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'EOF'
 cd ${DEPLOY_DIR}
 
 if [ ! -f .env ]; then
@@ -208,20 +376,19 @@ docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate backend
 echo '[INFO] Remove dangling images'
 docker image prune -f
 EOF
-                    """
+                    """.stripIndent()
                 }
             }
         }
 
         stage('Verify Deployment') {
             steps {
+                script { env.LAST_STAGE = 'Verify Deployment' }
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh """
                         set -eux
 
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<EOF
-set -eux
-
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'EOF'
 cd ${DEPLOY_DIR}
 
 echo '[INFO] Compose status'
@@ -236,7 +403,7 @@ curl -fsS ${HEALTHCHECK_URL}
 echo '[INFO] Backend recent logs'
 docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=100 backend
 EOF
-                    """
+                    """.stripIndent()
                 }
             }
         }
@@ -244,11 +411,50 @@ EOF
 
     post {
         success {
-            echo 'CI/CD pipeline succeeded.'
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE,
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ]
+                ]
+
+                echo 'CI/CD pipeline succeeded.'
+                sendMMNotify(true, buildInfo)
+            }
         }
+
         failure {
-            echo 'CI/CD pipeline failed.'
+            script {
+                /*
+                 * rawBuild.getLog() 는 현재 Jenkins 보안 정책에 막혀 있으므로 사용하지 않는다.
+                 * 대신 마지막으로 수행 중이던 stage 이름과 기본 메타데이터만 보낸다.
+                 */
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE,
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ],
+                    details : "Jenkins Script Security 승인 없이 동작하도록 최근 콘솔 로그 첨부는 비활성화했습니다. 빌드 상세 링크에서 실패 원인을 확인하세요."
+                ]
+
+                echo 'CI/CD pipeline failed.'
+                sendMMNotify(false, buildInfo)
+            }
         }
+
         always {
             deleteDir()
         }
