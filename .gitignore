@@ -45,6 +45,19 @@ backend/src/main/resources/application*.properties
 .sts4-cache/
 
 ################################
+# Crawler
+################################
+crawler/data/**/raw/
+crawler/data/**/incremental_output/
+crawler/data/**/processed/
+crawler/db_ready/
+crawler/*.lock
+crawler/.venv/
+crawler/venv/
+crawler/__pycache__/
+crawler/**/*.pyc
+
+################################
 # AI - Python / FastAPI
 ################################
 ai/__pycache__/
