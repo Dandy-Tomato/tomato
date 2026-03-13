@@ -10,6 +10,7 @@ import json
 import time
 import os
 import psycopg2
+from datetime import timedelta
 from openai import OpenAI
 from tqdm import tqdm
 from dotenv import load_dotenv
@@ -30,7 +31,6 @@ DB_PASSWORD    = os.getenv("DB_PASSWORD")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_FILE     = os.path.join(BASE_DIR, "repos_preprocessed.jsonl")
 EMBED_MODEL    = "text-embedding-3-small"
-BATCH_SIZE     = 100
 
 # ================================
 # 도메인 목록 (DB 값 기준)
@@ -78,7 +78,7 @@ Rules:
 - institution: government, NGO, association, public service
 
 Repository info:
-{repo['llm_input'][:1000]}
+{repo['llm_input'][:2000]}
 
 Respond with ONLY the domain value. Example: finance"""
 
@@ -129,11 +129,11 @@ def save_to_db(cur, repo: dict, domain: str, embedding: list):
         repo["id"],
         repo["full_name"],
         domain,
-        repo.get("languages_top1"),
+        repo.get("languages_top1"),  # enriched 필드 사용
         repo.get("topics", []),
         repo.get("html_url"),
         embedding_str,
-        repo.get("llm_input"),  # 추가
+        repo.get("llm_input"),
     ))
 
 
@@ -181,6 +181,7 @@ def main():
         return
 
     success, fail = 0, 0
+    start_time = time.time()
 
     for repo in tqdm(repos, desc="처리 중"):
         try:
@@ -205,7 +206,9 @@ def main():
 
     cur.close()
     conn.close()
+    elapsed = str(timedelta(seconds=int(time.time() - start_time)))
     print(f"\n🎉 완료! 성공: {success}개 / 실패: {fail}개")
+    print(f"   소요시간: {elapsed}")
 
 
 if __name__ == "__main__":

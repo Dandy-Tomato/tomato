@@ -58,8 +58,65 @@ STAR_RANGES = [
     "stars:201..300",
 ]
 
+# 기업/봇 계정 제외
+EXCLUDE_OWNER_KEYWORDS = [
+    "microsoft", "google", "amazon", "facebook", "meta",
+    "apple", "netflix", "uber", "airbnb", "twitter",
+    "linkedin", "salesforce", "oracle", "ibm", "vmware",
+]
+
+# 라이브러리/패키지/스펙 문서 제외 (레포명 기준)
+EXCLUDE_NAME_KEYWORDS = [
+    # 라이브러리/패키지
+    "-plugin", "-library", "-lib", "-sdk", "-framework",
+    "-utils", "-util", "-helper", "-helpers",
+    "-collection", "-components", "-hooks", "-wrapper",
+    "-cli", "-api-client", "-client-sdk",
+    # 문서/학습 자료
+    "-spec", "-rfc", "-standard", "-docs", "-book",
+    "awesome-", "cheatsheet", "tutorial", "boilerplate",
+    "-starter", "-template", "-scaffold", "-generator",
+    "-example", "-examples", "-demo", "-samples",
+]
+
+# 라이브러리/패키지 토픽
+EXCLUDE_TOPICS = {
+    "library", "plugin", "sdk", "framework", "package",
+    "module", "spec", "rfc", "boilerplate", "template",
+    "starter-kit", "starter", "scaffold", "generator",
+    "utility", "utilities", "helpers", "components",
+}
+
+
+def is_excluded_repo(repo: dict) -> tuple[bool, str]:
+    owner = (repo.get("full_name") or "").split("/")[0].lower()
+    name  = (repo.get("full_name") or "").lower()
+    topics = {t.lower() for t in (repo.get("topics") or [])}
+
+    if any(kw in owner for kw in EXCLUDE_OWNER_KEYWORDS):
+        return True, f"기업 계정: {owner}"
+    if any(kw in name for kw in EXCLUDE_NAME_KEYWORDS):
+        return True, f"레포명 키워드: {name}"
+    if EXCLUDE_TOPICS & topics:
+        return True, f"라이브러리 토픽: {EXCLUDE_TOPICS & topics}"
+
+    return False, ""
+
+
 def collect_repos(output_file="repos.jsonl"):
     total_saved = 0
+    total_excluded = 0
+
+    # 중복 방지용 수집된 ID 로드
+    done_ids = set()
+    if os.path.exists(output_file):
+        with open(output_file, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    done_ids.add(json.loads(line)["id"])
+                except:
+                    continue
+    print(f"📋 이미 수집된 레포: {len(done_ids)}개 (스킵)")
 
     for star_range in STAR_RANGES:
         print(f"\n📦 수집 시작: {star_range}")
@@ -87,16 +144,23 @@ def collect_repos(output_file="repos.jsonl"):
 
             with open(output_file, "a", encoding="utf-8") as f:
                 for repo in items:
+                    if repo.get("id") in done_ids:
+                        continue
+                    excluded_flag, reason = is_excluded_repo(repo)
+                    if excluded_flag:
+                        total_excluded += 1
+                        continue
                     row = {field: repo.get(field) for field in FIELDS}
                     f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                    done_ids.add(repo.get("id"))
 
             total_saved += len(items)
-            print(f"  ✅ page {page}: {len(items)}개 저장 (누적: {total_saved}개)")
+            print(f"  ✅ page {page}: {len(items)}개 처리 (누적 저장: {total_saved}개, 제외: {total_excluded}개)")
 
             # Search API: 분당 30회 제한 대응
             time.sleep(2)
 
-    print(f"\n🎉 수집 완료! 총 {total_saved}개 → {output_file}")
+    print(f"\n🎉 수집 완료! 총 {total_saved}개 저장, {total_excluded}개 제외 → {output_file}")
 
 
 # ✅ 실행
