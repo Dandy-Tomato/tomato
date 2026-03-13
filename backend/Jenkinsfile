@@ -71,7 +71,7 @@ pipeline {
     environment {
         APP_DIR      = 'backend'
         GIT_URL      = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
-        GIT_BRANCH   = '*/CI/develop'
+        GIT_BRANCH   = '*/develop'
 
         DOCKER_IMAGE = 'nnnnnara/tomato-backend'
 
