@@ -106,10 +106,7 @@ public class AuthService {
 
         refreshTokenStore.save(refresh, userId);
 
-        return TokenResponse.builder()
-                .accessToken(access)
-                .refreshToken(refresh)
-                .build();
+        return TokenResponse.of(access, refresh);
     }
 
     public TokenResponse refresh(String oldRefreshToken) {
@@ -134,10 +131,7 @@ public class AuthService {
 
         refreshTokenStore.rotate(oldRefreshToken, newRefresh, userId);
 
-        return TokenResponse.builder()
-                .accessToken(newAccess)
-                .refreshToken(newRefresh)
-                .build();
+        return TokenResponse.of(newAccess, newRefresh);
     }
 
     public void logout(String refreshToken) {
