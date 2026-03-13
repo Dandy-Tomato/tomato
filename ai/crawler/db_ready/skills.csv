@@ -1,0 +1,120 @@
+﻿skill_id,front_name,db_name
+1,API,api
+2,ASP.NET,asp_net
+3,AWS,aws
+4,Ajax,ajax
+5,Android,android
+6,Android Studio,android_studio
+7,Angular,angular
+8,Ansible,ansible
+9,Azure,azure
+10,C,c
+11,C#,csharp
+12,C/C++,cpp
+13,CAN,can
+14,CSS,css
+15,DBMS,dbms
+16,Django,django
+17,Docker,docker
+18,Embedded,embedded
+19,Embedded Linux,embedded_linux
+20,FastAPI,fastapi
+21,Flask,flask
+22,Flutter,flutter
+23,GCP,gcp
+24,Git,git
+25,GitHub,github
+26,GitLab,gitlab
+27,Google Analytics,google_analytics
+28,Google Optimize,google_optimize
+29,HTML,html
+30,JPA,jpa
+31,JSP,jsp
+32,Java,java
+33,JavaScript,javascript
+34,Jenkins,jenkins
+35,Kafka,kafka
+36,Kotlin,kotlin
+37,Kubernetes,kubernetes
+38,LLM,llm
+39,Laravel,laravel
+40,Linux,linux
+41,MQTT,mqtt
+42,MSA,msa
+43,MSSQL,mssql
+44,MariaDB,mariadb
+45,MongoDB,mongodb
+46,MyBatis,mybatis
+47,MySQL,mysql
+48,NestJS,nestjs
+49,Nexacro,nexacro
+50,Next.js,nextjs
+51,NoSQL,nosql
+52,Node.js,nodejs
+53,NumPy,numpy
+54,OpenCV,opencv
+55,Oracle,oracle
+56,PHP,php
+57,Pandas,pandas
+58,PostgreSQL,postgresql
+59,PyTorch,pytorch
+60,Python,python
+61,R,r
+62,RAG,rag
+63,RDBMS,rdbms
+64,REST API,rest_api
+65,ROS,ros
+66,ROS2,ros2
+67,RTOS,rtos
+68,Raspberry Pi,raspberry_pi
+69,React,react
+70,React Native,react_native
+71,Redis,redis
+72,SPSS,spss
+73,SQL,sql
+74,SaaS,saas
+75,Scikit-learn,scikit_learn
+76,Spring,spring
+77,Spring Batch,spring_batch
+78,Spring Boot,spring_boot
+79,Spring MVC,spring_mvc
+80,Spring Security,spring_security
+81,Swift,swift
+82,Tableau,tableau
+83,TensorFlow,tensorflow
+84,Terraform,terraform
+85,Tibero,tibero
+86,TypeScript,typescript
+87,Unix,unix
+88,VMware,vmware
+89,Vue.js,vuejs
+90,WAS,was
+91,WebSquare,websquare
+92,iOS,ios
+93,jQuery,jquery
+94,Nuxt.js,nuxtjs
+95,Svelte,svelte
+96,Tailwind CSS,tailwind
+97,Express,expressjs
+98,Go,go
+99,Rust,rust
+100,Ruby on Rails,rails
+101,Elasticsearch,elasticsearch
+102,Firebase,firebase
+103,Supabase,supabase
+104,GraphQL,graphql
+105,gRPC,grpc
+106,GitHub Actions,github_actions
+107,Nginx,nginx
+108,RabbitMQ,rabbitmq
+109,WebSocket,websocket
+110,OAuth2,oauth2
+111,JWT,jwt
+112,LangChain,langchain
+113,OpenAI API,openai_api
+114,Spark,spark
+115,Airflow,airflow
+116,Prometheus,prometheus
+117,Grafana,grafana
+118,Arduino,arduino
+915,Spring Cloud,spring_cloud
