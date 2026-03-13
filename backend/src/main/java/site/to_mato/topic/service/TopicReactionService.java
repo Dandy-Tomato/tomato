@@ -20,7 +20,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class TopicActionService {
+public class TopicReactionService {
 
     private final TopicRepository topicRepository;
     private final ProjectRepository projectRepository;
