@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
-import site.to_mato.user.dto.response.MyProfileResponse;
 import site.to_mato.user.dto.response.UserProfileResponse;
 import site.to_mato.user.entity.User;
 import site.to_mato.user.repository.UserDesiredCompanyRepository;
@@ -23,7 +22,7 @@ public class UserService {
     private final UserSkillRepository userSkillRepository;
     private final UserDesiredCompanyRepository userDesiredCompanyRepository;
 
-    public MyProfileResponse getMyProfile(Long userId) {
+    public UserProfileResponse getMyProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -35,14 +34,14 @@ public class UserService {
                 .map(userCompany -> userCompany.getCompany().getId())
                 .toList();
 
-        return MyProfileResponse.builder()
-                .email(user.getEmail())
-                .nickname(user.getNickname())
-                .githubUsername(user.getGithubUsername())
-                .position(user.getPosition() != null ? user.getPosition().getId() : null)
-                .companyIds(companyIds)
-                .skillIds(skillIds)
-                .build();
+        return UserProfileResponse.of(
+                user.getEmail(),
+                user.getNickname(),
+                user.getGithubUsername(),
+                user.getPosition() != null ? user.getPosition().getId() : null,
+                skillIds,
+                companyIds
+        );
     }
 
     public UserProfileResponse getUserProfile(Long userId) {
@@ -57,12 +56,13 @@ public class UserService {
                 .map(userCompany -> userCompany.getCompany().getId())
                 .toList();
 
-        return UserProfileResponse.builder()
-                .nickname(user.getNickname())
-                .githubUsername(user.getGithubUsername())
-                .position(user.getPosition() != null ? user.getPosition().getId() : null)
-                .skillIds(skillIds)
-                .companyIds(companyIds)
-                .build();
+        return UserProfileResponse.of(
+                null,
+                user.getNickname(),
+                user.getGithubUsername(),
+                user.getPosition() != null ? user.getPosition().getId() : null,
+                skillIds,
+                companyIds
+        );
     }
 }

@@ -1,17 +1,31 @@
 package site.to_mato.user.dto.response;
 
-import lombok.Builder;
-import lombok.Getter;
-
 import java.util.List;
 
-@Getter
-@Builder
-public class UserProfileResponse {
+public record UserProfileResponse(
+        String email,
+        String nickname,
+        String githubUsername,
+        Long position,
+        List<Long> skillIds,
+        List<Long> companyIds
+) {
 
-    private String nickname;
-    private String githubUsername;
-    private Long position;
-    private List<Long> skillIds;
-    private List<Long> companyIds;
+    public static UserProfileResponse of(
+            String email,
+            String nickname,
+            String githubUsername,
+            Long position,
+            List<Long> skillIds,
+            List<Long> companyIds
+    ) {
+        return new UserProfileResponse(
+                email,
+                nickname,
+                githubUsername,
+                position,
+                skillIds,
+                companyIds
+        );
+    }
 }

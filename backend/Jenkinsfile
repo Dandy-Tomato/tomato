@@ -69,16 +69,18 @@ pipeline {
     }
 
     environment {
-        APP_DIR      = 'backend'
-        GIT_URL      = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
-        GIT_BRANCH   = '*/develop'
+        APP_DIR         = 'backend'
+        GIT_URL         = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
+        GIT_BRANCH      = '*/develop'
 
-        DOCKER_IMAGE = 'nnnnnara/tomato-backend'
+        DOCKER_IMAGE    = 'nnnnnara/tomato-backend'
 
-        EC2_HOST     = 'j14a508.p.ssafy.io'
-        EC2_USER     = 'ubuntu'
-        DEPLOY_DIR   = '/home/ubuntu/tomato'
-        COMPOSE_FILE = 'docker-compose.prod.yml'
+        EC2_HOST        = 'j14a508.p.ssafy.io'
+        EC2_USER        = 'ubuntu'
+        DEPLOY_DIR      = '/home/ubuntu/tomato'
+        COMPOSE_FILE    = 'docker-compose.prod.yml'
+
+        HEALTHCHECK_URL = 'http://localhost:8080/health'
     }
 
     stages {
@@ -100,7 +102,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 deleteDir()
-                checkout([$class: 'GitSCM',
+                checkout([
+                    $class: 'GitSCM',
                     branches: [[name: env.GIT_BRANCH]],
                     userRemoteConfigs: [[
                         url: env.GIT_URL,
@@ -117,13 +120,13 @@ pipeline {
                         set -eux
 
                         export JAVA_HOME=/opt/java/openjdk
-                        export PATH=$JAVA_HOME/bin:$PATH
+                        export PATH="$JAVA_HOME/bin:$PATH"
 
                         mkdir -p ~/.gradle
-                        printf '%s\n' \
-                            'org.gradle.java.installations.auto-detect=false' \
-                            'org.gradle.java.installations.paths=/opt/java/openjdk' \
-                            > ~/.gradle/gradle.properties
+                        cat > ~/.gradle/gradle.properties <<'EOF'
+org.gradle.java.installations.auto-detect=false
+org.gradle.java.installations.paths=/opt/java/openjdk
+EOF
 
                         chmod +x gradlew
 
@@ -143,7 +146,11 @@ pipeline {
                         set -eux
                         ls -al build/libs
                         find build/libs -maxdepth 1 -type f -name '*.jar' | sort
-                        docker build -t ${DOCKER_IMAGE}:latest -t ${DOCKER_IMAGE}:${BUILD_NUMBER} .
+
+                        docker build \
+                          -t ${DOCKER_IMAGE}:latest \
+                          -t ${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                          .
                     '''
                 }
             }
@@ -170,25 +177,66 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 sshagent(credentials: ['ec2-prod-ssh']) {
-                    sh '''
+                    sh """
                         set -eux
 
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
-                            set -eux
-                            cd ${DEPLOY_DIR}
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<EOF
+set -eux
 
-                            echo '[INFO] Pull new backend image'
-                            BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                            docker compose -f ${COMPOSE_FILE} pull backend
+cd ${DEPLOY_DIR}
 
-                            echo '[INFO] Recreate backend container'
-                            BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER} \
-                            docker compose -f ${COMPOSE_FILE} up -d backend
+if [ ! -f .env ]; then
+  echo "[ERROR] ${DEPLOY_DIR}/.env not found"
+  exit 1
+fi
 
-                            echo '[INFO] Remove dangling images'
-                            docker image prune -f
-                        "
-                    '''
+if grep -q '^BACKEND_IMAGE=' .env; then
+  sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER}|' .env
+else
+  echo 'BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER}' >> .env
+fi
+
+echo '[INFO] Current BACKEND_IMAGE in .env'
+grep '^BACKEND_IMAGE=' .env
+
+echo '[INFO] Pull new backend image'
+docker compose --env-file .env -f ${COMPOSE_FILE} pull backend
+
+echo '[INFO] Recreate backend container'
+docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate backend
+
+echo '[INFO] Remove dangling images'
+docker image prune -f
+EOF
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh """
+                        set -eux
+
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<EOF
+set -eux
+
+cd ${DEPLOY_DIR}
+
+echo '[INFO] Compose status'
+docker compose --env-file .env -f ${COMPOSE_FILE} ps
+
+echo '[INFO] Wait for application startup'
+sleep 10
+
+echo '[INFO] Health check'
+curl -fsS ${HEALTHCHECK_URL}
+
+echo '[INFO] Backend recent logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=100 backend
+EOF
+                    """
                 }
             }
         }

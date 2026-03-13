@@ -1,7 +1,4 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pathlib import Path
-
-ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -11,9 +8,11 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
+    KAFKA_BOOTSTRAP_SERVERS: str | None = None
+    KAFKA_ACTION_LOG_TOPIC: str | None = None
+    KAFKA_CONSUMER_GROUP: str | None = None
+
     model_config = SettingsConfigDict(
-        env_file=str(ENV_FILE) if ENV_FILE.exists() else None,
-        env_file_encoding="utf-8",
         extra="ignore",
     )
 
