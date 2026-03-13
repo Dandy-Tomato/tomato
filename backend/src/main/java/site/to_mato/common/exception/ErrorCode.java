@@ -47,6 +47,11 @@ public enum ErrorCode {
     RECOMMENDATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 5000, "추천 생성에 실패했습니다."),
 
     // =========================
+    // 6000: TEAM INTERACTION
+    // =========================
+    REACTION_CONFLICT(HttpStatus.CONFLICT, 6000, "다른 사용자가 먼저 반응을 변경했습니다."),
+
+    // =========================
     // 9000: SERVER
     // =========================
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, 9000, "서버 오류가 발생했습니다.");
