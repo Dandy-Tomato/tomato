@@ -407,6 +407,23 @@ EOF
                 }
             }
         }
+
+        stage('Verify Deployment') {
+            steps {
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh '''
+                        set -eux
+
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
+                            set -eux
+                            cd ${DEPLOY_DIR}
+                            docker compose -f ${COMPOSE_FILE} ps
+                            docker compose -f ${COMPOSE_FILE} logs --tail=100 backend
+                        "
+                    '''
+                }
+            }
+}
     }
 
     post {
