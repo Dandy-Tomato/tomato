@@ -1,0 +1,12 @@
+{
+  "run_ts": "20260308_081715",
+  "major_code": "10007",
+  "major_name": "IT 정보통신업",
+  "baseline_cnt": 18906,
+  "baseline_cond_text": "솔루션·SI·CRM·ERP삭제 웹에이전시삭제 쇼핑몰·오픈마켓·소셜커머스삭제 포털·컨텐츠·커뮤니티삭제 네트워크·통신서비스삭제 정보보안삭제 컴퓨터·하드웨어·장비삭제 게임·애니메이션삭제 모바일·APP삭제 IT컨설팅삭제 초기화 조건저장 검색완료",
+  "total_cnt": 18906,
+  "max_pages_est": 473,
+  "unique_links": 9988,
+  "job_ids_saved": 9988,
+  "seen_path": "./seen_job_ids_10007.txt"
+}
