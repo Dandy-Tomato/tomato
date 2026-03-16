@@ -14,7 +14,7 @@ from app.repositories.project_repository import (
 )
 from app.repositories.topic_repository import find_topic_embedding_by_id
 from app.schemas.action_log_event import ActionLogEvent
-from app.schemas.action_type import ActionType
+from app.schemas.enums.action_type import ActionType
 from app.utils.vector_utils import add_vectors, multiply_vector, zero_vector
 
 logger = logging.getLogger(__name__)

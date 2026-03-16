@@ -11,9 +11,9 @@ from app.repositories.action_log_process_repository import (
     mark_action_log_success,
 )
 from app.schemas.action_log_event import ActionLogEvent
-from app.schemas.commit_decision import CommitDecision
-from app.schemas.process_status import ProcessStatus
-from app.services.preference_update_service import update_preference_by_event
+from app.schemas.enums.commit_decision import CommitDecision
+from app.schemas.enums.process_status import ProcessStatus
+from app.services.preference_updater import update_preference_by_event
 
 logger = logging.getLogger(__name__)
 

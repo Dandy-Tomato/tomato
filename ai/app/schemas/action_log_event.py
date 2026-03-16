@@ -1,5 +1,5 @@
 from app.schemas.base import CamelModel
-from app.schemas.action_type import ActionType
+from app.schemas.enums.action_type import ActionType
 
 
 class ActionLogEvent(CamelModel):
