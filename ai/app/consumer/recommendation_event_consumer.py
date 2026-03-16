@@ -7,7 +7,7 @@ from kafka import KafkaConsumer
 
 from app.common.errors import AppError
 from app.schemas.action_log_event import ActionLogEvent
-from app.schemas.commit_decision import CommitDecision
+from app.schemas.enums.commit_decision import CommitDecision
 from app.services.action_log_process_service import process_action_log_event
 from app.settings import settings
 

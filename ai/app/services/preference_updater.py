@@ -8,13 +8,20 @@ from app.repositories.action_log_repository import (
     count_effective_actions_by_project_id,
     find_recent_effective_action_logs_with_topic_embedding,
 )
+from app.repositories.project_domain_repository import upsert_project_domain_weight
 from app.repositories.project_repository import (
     find_project_preference_state_by_project_id,
+    update_last_processed_action_log_id,
     update_preference_state,
 )
-from app.repositories.topic_repository import find_topic_embedding_by_id
+from app.repositories.project_skill_repository import upsert_project_skill_weight
+from app.repositories.topic_repository import (
+    find_topic_domain_ids_by_topic_id,
+    find_topic_embedding_by_id,
+    find_topic_skill_ids_by_topic_id,
+)
 from app.schemas.action_log_event import ActionLogEvent
-from app.schemas.action_type import ActionType
+from app.schemas.enums.action_type import ActionType
 from app.utils.vector_utils import add_vectors, multiply_vector, zero_vector
 
 logger = logging.getLogger(__name__)
@@ -23,7 +30,9 @@ PREFERENCE_INIT_THRESHOLD = 3
 PREFERENCE_INIT_SAMPLE_SIZE = 3
 
 
-def update_preference_by_event(event: ActionLogEvent) -> None:
+def update_project_preference_by_event(
+    event: ActionLogEvent,
+) -> None:
     with session_scope() as db:
         project_state = get_required_project_preference_state(
             db=db,
@@ -38,14 +47,19 @@ def update_preference_by_event(event: ActionLogEvent) -> None:
             last_processed_action_log_id=last_processed_action_log_id,
         ):
             logger.info(
-                "Action log already reflected in preference embedding | action_log_id=%s project_id=%s last_processed_action_log_id=%s",
+                "Action log already reflected in project preference | action_log_id=%s project_id=%s last_processed_action_log_id=%s",
                 event.action_log_id,
                 event.project_id,
                 last_processed_action_log_id,
             )
             return
 
-        topic_embedding = get_required_topic_embedding(db, event.topic_id)
+        reflect_project_skill_and_domain_weight(
+            db=db,
+            project_id=event.project_id,
+            topic_id=event.topic_id,
+            action_type=event.action_type,
+        )
 
         if current_embedding is None:
             new_embedding = build_initial_preference_embedding_or_skip(
@@ -53,9 +67,26 @@ def update_preference_by_event(event: ActionLogEvent) -> None:
                 project_id=event.project_id,
                 action_log_id=event.action_log_id,
             )
+
             if new_embedding is None:
+                save_last_processed_action_log_id(
+                    db=db,
+                    project_id=event.project_id,
+                    last_processed_action_log_id=event.action_log_id,
+                )
+
+                logger.info(
+                    "Project weights updated and preference embedding creation skipped | action_log_id=%s project_id=%s topic_id=%s action_type=%s weight=%s",
+                    event.action_log_id,
+                    event.project_id,
+                    event.topic_id,
+                    event.action_type.value,
+                    event.action_type.weight,
+                )
                 return
+
         else:
+            topic_embedding = get_required_topic_embedding(db, event.topic_id)
             new_embedding = build_incremental_preference_embedding(
                 current_embedding=current_embedding,
                 topic_embedding=topic_embedding,
@@ -70,7 +101,7 @@ def update_preference_by_event(event: ActionLogEvent) -> None:
         )
 
         logger.info(
-            "Preference embedding updated | action_log_id=%s project_id=%s topic_id=%s action_type=%s weight=%s",
+            "Preference embedding and project weights updated | action_log_id=%s project_id=%s topic_id=%s action_type=%s weight=%s",
             event.action_log_id,
             event.project_id,
             event.topic_id,
@@ -79,7 +110,10 @@ def update_preference_by_event(event: ActionLogEvent) -> None:
         )
 
 
-def get_required_project_preference_state(db, project_id: int) -> dict:
+def get_required_project_preference_state(
+    db,
+    project_id: int,
+) -> dict:
     project_state = find_project_preference_state_by_project_id(
         db=db,
         project_id=project_id,
@@ -105,14 +139,19 @@ def is_already_processed(
     return event_action_log_id <= last_processed_action_log_id
 
 
-def get_required_topic_embedding(db, topic_id: int) -> list[float]:
+def get_required_topic_embedding(
+    db,
+    topic_id: int,
+) -> list[float]:
     topic_embedding = find_topic_embedding_by_id(db, topic_id)
+
     if topic_embedding is None:
         raise AppError(
             code=ErrorCode.NOT_FOUND,
             detail=f"topic embedding not found: topic_id={topic_id}",
             meta={"topic_id": topic_id},
         )
+
     return topic_embedding
 
 
@@ -210,4 +249,55 @@ def save_preference_state(
             code=ErrorCode.NOT_FOUND,
             detail=f"failed to update preference state: project_id={project_id}",
             meta={"project_id": project_id},
+        )
+
+
+def save_last_processed_action_log_id(
+    db,
+    project_id: int,
+    last_processed_action_log_id: int,
+) -> None:
+    updated_row_count = update_last_processed_action_log_id(
+        db=db,
+        project_id=project_id,
+        last_processed_action_log_id=last_processed_action_log_id,
+    )
+
+    if updated_row_count == 0:
+        raise AppError(
+            code=ErrorCode.NOT_FOUND,
+            detail=f"failed to update last processed action log id: project_id={project_id}",
+            meta={"project_id": project_id},
+        )
+
+
+def reflect_project_skill_and_domain_weight(
+    db,
+    project_id: int,
+    topic_id: int,
+    action_type: ActionType,
+) -> None:
+    skill_ids = find_topic_skill_ids_by_topic_id(
+        db=db,
+        topic_id=topic_id,
+    )
+    domain_ids = find_topic_domain_ids_by_topic_id(
+        db=db,
+        topic_id=topic_id,
+    )
+
+    for skill_id in skill_ids:
+        upsert_project_skill_weight(
+            db=db,
+            project_id=project_id,
+            skill_id=skill_id,
+            weight=action_type.weight,
+        )
+
+    for domain_id in domain_ids:
+        upsert_project_domain_weight(
+            db=db,
+            project_id=project_id,
+            domain_id=domain_id,
+            weight=action_type.weight,
         )
