@@ -1,10 +1,10 @@
 package site.to_mato.company.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import site.to_mato.common.response.ApiResponse;
 import site.to_mato.company.service.CompanySearchService;
 
 @RestController
@@ -15,11 +15,11 @@ public class CompanyAdminController {
     private final CompanySearchService companySearchService;
 
     @PostMapping("/normalize-search-name")
-    public ResponseEntity<Integer> normalizeSearchName() {
+    public ApiResponse<Integer> normalizeSearchName() {
 
         int updatedCount = companySearchService.fillSearchNames();
 
-        return ResponseEntity.ok(updatedCount);
+        return ApiResponse.ok(updatedCount);
     }
 
 }

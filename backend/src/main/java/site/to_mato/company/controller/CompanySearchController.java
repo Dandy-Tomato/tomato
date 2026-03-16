@@ -2,8 +2,8 @@ package site.to_mato.company.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import site.to_mato.common.response.ApiResponse;
 import site.to_mato.company.dto.response.CompanySearchResponse;
 import site.to_mato.company.service.CompanySearchService;
 
@@ -17,20 +17,20 @@ public class CompanySearchController {
     private final CompanySearchService companySearchService;
 
     @GetMapping
-    public ResponseEntity<List<CompanySearchResponse>> searchCompanies(
+    public ApiResponse<List<CompanySearchResponse>> searchCompanies(
             @RequestParam(name = "keyword", required = false) String keyword,
             Pageable pageable
     ) {
         List<CompanySearchResponse> result = companySearchService.searchCompanies(keyword, pageable);
-        return ResponseEntity.ok(result);
+        return ApiResponse.ok(result);
     }
 
     @GetMapping("/auto-complete")
-    public ResponseEntity<List<CompanySearchResponse>> searchCompanySuggestions(
+    public ApiResponse<List<CompanySearchResponse>> searchCompanySuggestions(
             @RequestParam(name = "keyword", required = false) String keyword
     ) {
         List<CompanySearchResponse> result = companySearchService.autocompleteCompanies(keyword);
-        return ResponseEntity.ok(result);
+        return ApiResponse.ok(result);
     }
 
 }
