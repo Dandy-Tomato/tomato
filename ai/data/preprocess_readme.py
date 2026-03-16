@@ -9,6 +9,8 @@ import re
 import json
 import hashlib
 import os
+import time
+from datetime import timedelta
 from typing import Dict, List, Tuple, Optional, Any
 
 # =============================================================
@@ -244,6 +246,56 @@ def preprocess_all(
     input_file="repos_enriched.jsonl",
     output_file="repos_preprocessed.jsonl"
 ):
+    # 부적합 레포 판단 키워드
+    # ⚠️ collect_repos.py의 EXCLUDE_NAME_KEYWORDS, EXCLUDE_TOPICS와 항상 동기화할 것
+    EXCLUDE_README_KEYWORDS = [
+        # 패키지/라이브러리 선언
+        "this is a plugin", "this is a library", "this is a package",
+        "this is a framework", "this is a sdk", "this is a module",
+        "this package", "this library", "this plugin", "this module",
+        "this gem", "this crate", "this extension",
+        # 설치 명령어 (패키지 배포용 레포 특징)
+        "npm install", "pip install", "gem install", "composer require",
+        "yarn add", "cargo add", "go get",
+        # 튜토리얼/강의 자료
+        "this repository contains", "this repo contains solutions",
+        "this repo contains examples", "lecture", "course material",
+        "algorithm solutions", "coding test", "baekjoon", "leetcode",
+    ]
+    EXCLUDE_NAME_KEYWORDS = [
+        # 라이브러리/패키지 (collect_repos.py와 동기화)
+        "-plugin", "-library", "-lib", "-sdk", "-framework",
+        "-utils", "-util", "-helper", "-helpers",
+        "-collection", "-components", "-hooks", "-wrapper",
+        "-cli", "-api-client", "-client-sdk",
+        # 문서/학습 자료
+        "-spec", "-rfc", "-standard", "-docs", "-book",
+        "awesome-", "cheatsheet", "tutorial", "boilerplate",
+        "-starter", "-template", "-scaffold", "-generator",
+        "-example", "-examples", "-demo", "-samples",
+    ]
+    LIB_TOPICS = {
+        # (collect_repos.py와 동기화)
+        "library", "plugin", "sdk", "framework", "package",
+        "module", "spec", "rfc", "boilerplate", "template",
+        "starter-kit", "starter", "scaffold", "generator",
+        "utility", "utilities", "helpers", "components",
+    }
+
+    def is_excluded(repo: dict) -> tuple[bool, str]:
+        name   = (repo.get("full_name") or "").lower()
+        topics = {t.lower() for t in (repo.get("topics") or [])}
+        readme = (repo.get("readme_text") or "").lower()[:500]
+
+        if any(kw in name for kw in EXCLUDE_NAME_KEYWORDS):
+            return True, f"레포명 키워드: {name}"
+        if LIB_TOPICS & topics:
+            return True, f"라이브러리 토픽: {LIB_TOPICS & topics}"
+        if any(kw in readme for kw in EXCLUDE_README_KEYWORDS):
+            return True, "README 패키지 키워드 감지"
+        if readme and len(readme) < 100:
+            return True, "README 너무 짧음"
+        return False, ""
     # 이어받기용 이미 처리된 ID 로드
     done_ids = set()
     if os.path.exists(output_file):
@@ -261,8 +313,10 @@ def preprocess_all(
         total = sum(1 for _ in f)
     print(f"📦 총 처리 대상: {total}개\n")
 
+    start_time = time.time()
     processed = 0
     skipped = 0
+    excluded = 0
     readme_none = 0
 
     with open(input_file, "r", encoding="utf-8") as f_in, \
@@ -278,6 +332,12 @@ def preprocess_all(
 
             if repo_id in done_ids:
                 skipped += 1
+                continue
+
+            # 부적합 레포 필터링
+            excluded_flag, reason = is_excluded(repo)
+            if excluded_flag:
+                excluded += 1
                 continue
 
             readme_text = repo.get("readme_text")
@@ -306,8 +366,10 @@ def preprocess_all(
             if processed % 200 == 0:
                 print(f"  ✅ {processed}/{total} 처리 완료...")
 
+    elapsed = time.time() - start_time
     print(f"\n🎉 전처리 완료!")
-    print(f"   처리: {processed}개 / 스킵: {skipped}개 / README 없음: {readme_none}개")
+    print(f"   처리: {processed}개 / 스킵: {skipped}개 / 제외: {excluded}개 / README 없음: {readme_none}개")
+    print(f"   소요시간: {str(timedelta(seconds=int(elapsed)))}")
     print(f"   결과 파일: {output_file}")
 
 

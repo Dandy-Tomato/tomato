@@ -26,9 +26,16 @@ public class Company extends BaseEntity {
     @JoinColumn(name = "domain_id")
     private Domain domain;
 
+    @Column(name = "search_name")
+    private String searchName;
+
     @Builder
     private Company(String name, Domain domain) {
         this.name = name;
         this.domain = domain;
+    }
+
+    public void updateSearchName(String searchName) {
+        this.searchName = searchName;
     }
 }
