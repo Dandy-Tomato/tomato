@@ -1,6 +1,7 @@
 package site.to_mato.company.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,16 +21,15 @@ public class CompanySearchService {
 
     private final CompanyRepository companyRepository;
 
-    public List<CompanySearchResponse> searchCompanies(String keyword, Pageable pageable) {
+    public Page<CompanySearchResponse> searchCompanies(String keyword, Pageable pageable) {
         String normalizedKeyword = CompanyNameNormalizer.normalize(keyword);
 
         if (normalizedKeyword == null || normalizedKeyword.trim().isEmpty()) {
-            return Collections.emptyList();
+            return Page.empty();
         }
 
-        return companyRepository.findBySearchNameContainingIgnoreCase(normalizedKeyword, pageable).stream()
-                .map(CompanySearchResponse::from)
-                .collect(Collectors.toList());
+        return companyRepository.findBySearchNameContainingIgnoreCase(normalizedKeyword, pageable)
+                .map(CompanySearchResponse::from);
     }
 
     public List<CompanySearchResponse> autocompleteCompanies(String keyword) {
