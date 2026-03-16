@@ -93,7 +93,7 @@ def load_done_ids(output_file):
 
 
 # ✅ 메인 풍부화 함수
-def enrich_repos(input_file="repos.jsonl", output_file="repos_enriched.jsonl"):
+def enrich_repos(input_file="repos_portfolio.jsonl", output_file="portfolios_repos_enriched.jsonl"):
     # 이어받기: 이미 처리된 ID 스킵
     done_ids = load_done_ids(output_file)
     print(f"📋 이미 처리된 레포: {len(done_ids)}개 (스킵)")
