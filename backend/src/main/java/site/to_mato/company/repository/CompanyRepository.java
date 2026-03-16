@@ -10,4 +10,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
 
     List<Company> findBySearchNameContainingIgnoreCase(String keyword, Pageable pageable);
 
+    List<Company> findTop10BySearchNameStartingWithIgnoreCase(String keyword);
+
 }

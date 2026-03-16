@@ -21,11 +21,24 @@ public class CompanySearchService {
 
     public List<CompanySearchResponse> searchCompanies(String keyword, Pageable pageable) {
         String normalizedKeyword = CompanyNameNormalizer.normalize(keyword);
-        if (keyword == null || keyword.trim().isEmpty()) {
+
+        if (normalizedKeyword == null || normalizedKeyword.trim().isEmpty()) {
             return Collections.emptyList();
         }
 
         return companyRepository.findBySearchNameContainingIgnoreCase(normalizedKeyword, pageable).stream()
+                .map(CompanySearchResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<CompanySearchResponse> autocompleteCompanies(String keyword) {
+        String normalizedKeyword = CompanyNameNormalizer.normalize(keyword);
+
+        if (normalizedKeyword == null || normalizedKeyword.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return companyRepository.findTop10BySearchNameStartingWithIgnoreCase(normalizedKeyword).stream()
                 .map(CompanySearchResponse::from)
                 .collect(Collectors.toList());
     }

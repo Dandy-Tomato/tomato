@@ -25,4 +25,12 @@ public class CompanySearchController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/auto-complete")
+    public ResponseEntity<List<CompanySearchResponse>> searchCompanySuggestions(
+            @RequestParam(name = "keyword", required = false) String keyword
+    ) {
+        List<CompanySearchResponse> result = companySearchService.autocompleteCompanies(keyword);
+        return ResponseEntity.ok(result);
+    }
+
 }
