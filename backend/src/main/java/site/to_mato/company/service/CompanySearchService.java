@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.company.dto.response.CompanySearchResponse;
 import site.to_mato.company.repository.CompanyRepository;
+import site.to_mato.company.util.CompanyNameNormalizer;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,11 +20,12 @@ public class CompanySearchService {
     private final CompanyRepository companyRepository;
 
     public List<CompanySearchResponse> searchCompanies(String keyword, Pageable pageable) {
+        String normalizedKeyword = CompanyNameNormalizer.normalize(keyword);
         if (keyword == null || keyword.trim().isEmpty()) {
             return Collections.emptyList();
         }
 
-        return companyRepository.findBySearchNameContainingIgnoreCase(keyword, pageable).stream()
+        return companyRepository.findBySearchNameContainingIgnoreCase(normalizedKeyword, pageable).stream()
                 .map(CompanySearchResponse::from)
                 .collect(Collectors.toList());
     }
