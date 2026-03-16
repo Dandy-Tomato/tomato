@@ -13,14 +13,16 @@ from app.repositories.action_log_process_repository import (
 from app.schemas.action_log_event import ActionLogEvent
 from app.schemas.enums.commit_decision import CommitDecision
 from app.schemas.enums.process_status import ProcessStatus
-from app.services.preference_updater import update_preference_by_event
+from app.services.preference_updater import update_project_preference_by_event
 
 logger = logging.getLogger(__name__)
 
 MAX_RETRY_COUNT = 3
 
 
-def process_action_log_event(event: ActionLogEvent) -> CommitDecision:
+def process_action_log_event(
+    event: ActionLogEvent,
+) -> CommitDecision:
     try:
         process_row = get_required_process_row(event.action_log_id)
 
@@ -44,7 +46,7 @@ def process_action_log_event(event: ActionLogEvent) -> CommitDecision:
         return CommitDecision.COMMIT
 
     try:
-        update_preference_by_event(event)
+        update_project_preference_by_event(event)
         return mark_success_and_commit(event.action_log_id)
 
     except Exception as exc:
@@ -54,7 +56,9 @@ def process_action_log_event(event: ActionLogEvent) -> CommitDecision:
         )
 
 
-def get_required_process_row(action_log_id: int) -> dict:
+def get_required_process_row(
+    action_log_id: int,
+) -> dict:
     with session_scope() as db:
         process_row = find_action_log_process_by_action_log_id(
             db=db,
@@ -71,7 +75,10 @@ def get_required_process_row(action_log_id: int) -> dict:
         return process_row
 
 
-def should_commit_without_processing(process_row: dict, action_log_id: int) -> bool:
+def should_commit_without_processing(
+    process_row: dict,
+    action_log_id: int,
+) -> bool:
     status = ProcessStatus(process_row["status"])
     retry_count = int(process_row["retry_count"])
 
@@ -93,7 +100,9 @@ def should_commit_without_processing(process_row: dict, action_log_id: int) -> b
     return False
 
 
-def mark_processing_or_raise(action_log_id: int) -> None:
+def mark_processing_or_raise(
+    action_log_id: int,
+) -> None:
     with session_scope() as db:
         updated_row_count = mark_action_log_processing(
             db=db,
@@ -108,7 +117,9 @@ def mark_processing_or_raise(action_log_id: int) -> None:
             )
 
 
-def mark_success_and_commit(action_log_id: int) -> CommitDecision:
+def mark_success_and_commit(
+    action_log_id: int,
+) -> CommitDecision:
     try:
         with session_scope() as db:
             updated_row_count = mark_action_log_success(
