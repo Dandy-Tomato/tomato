@@ -12,4 +12,6 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
 
     List<Company> findTop10BySearchNameStartingWithIgnoreCase(String keyword);
 
+    List<Company> findBySearchNameIsNull();
+
 }

@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.company.dto.response.CompanySearchResponse;
+import site.to_mato.company.entity.Company;
 import site.to_mato.company.repository.CompanyRepository;
 import site.to_mato.company.util.CompanyNameNormalizer;
 
@@ -41,6 +42,19 @@ public class CompanySearchService {
         return companyRepository.findTop10BySearchNameStartingWithIgnoreCase(normalizedKeyword).stream()
                 .map(CompanySearchResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public int fillSearchNames() {
+
+        List<Company> companies = companyRepository.findBySearchNameIsNull();
+
+        for (Company company : companies) {
+            String normalized = CompanyNameNormalizer.normalize(company.getName());
+            company.updateSearchName(normalized);
+        }
+
+        return companies.size();
     }
 
 }
