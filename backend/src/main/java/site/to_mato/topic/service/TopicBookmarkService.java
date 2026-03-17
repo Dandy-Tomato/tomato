@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.repository.ProjectRepository;
+import site.to_mato.recommendation.entity.enums.ActionType;
+import site.to_mato.recommendation.service.ActionLogService;
 import site.to_mato.topic.entity.ProjectTopicBookmark;
 import site.to_mato.topic.entity.Topic;
 import site.to_mato.topic.repository.ProjectTopicBookmarkRepository;
@@ -15,11 +17,12 @@ import site.to_mato.topic.repository.TopicRepository;
 public class TopicBookmarkService {
 
     private final TopicRepository topicRepository;
+    private final ActionLogService actionLogService;
     private final ProjectRepository projectRepository;
     private final ProjectTopicBookmarkRepository bookmarkRepository;
 
     @Transactional
-    public boolean toggleBookmark(Long projectId, Long topicId) {
+    public boolean toggleBookmark(Long actorUserId, Long projectId, Long topicId) {
 
         boolean isBookmarked = bookmarkRepository.existsByProjectIdAndTopicId(projectId, topicId);
         if (isBookmarked) {
@@ -31,6 +34,7 @@ public class TopicBookmarkService {
         Topic topic = topicRepository.getReferenceById(topicId);
 
         bookmarkRepository.save(ProjectTopicBookmark.of(project, topic));
+        actionLogService.createActionLog(actorUserId, projectId, topicId, ActionType.BOOKMARK);
 
         return true;
     }

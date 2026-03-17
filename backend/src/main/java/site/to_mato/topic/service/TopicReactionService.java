@@ -10,6 +10,8 @@ import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.repository.ProjectRepository;
+import site.to_mato.recommendation.entity.enums.ActionType;
+import site.to_mato.recommendation.service.ActionLogService;
 import site.to_mato.topic.entity.ProjectTopicReaction;
 import site.to_mato.topic.entity.Topic;
 import site.to_mato.topic.entity.enums.Reaction;
@@ -23,16 +25,18 @@ import java.util.Objects;
 public class TopicReactionService {
 
     private final TopicRepository topicRepository;
+    private final ActionLogService actionLogService;
     private final ProjectRepository projectRepository;
     private final ProjectTopicReactionRepository reactionRepository;
 
     @Transactional
-    public void react(Long projectId, Long topicId, Reaction reaction, Long version) {
+    public void react(Long actorUserId, Long projectId, Long topicId, Reaction reaction, Long version) {
 
         ProjectTopicReaction reactionEntity =
                 reactionRepository
                         .findByProjectIdAndTopicId(projectId, topicId)
                         .orElse(null);
+
         try {
             if (reactionEntity == null) {
                 // 기존(DB)에 데이터가 없는데 클라이언트가 버전을 보내온 경우 충돌(이미 삭제됨)
@@ -40,6 +44,7 @@ public class TopicReactionService {
                     throw new BusinessException(ErrorCode.REACTION_CONFLICT);
                 }
                 createReaction(projectId, topicId, reaction);
+                createActionLog(actorUserId, projectId, topicId, reaction);
                 return;
             }
 
@@ -52,8 +57,11 @@ public class TopicReactionService {
                 deleteReaction(reactionEntity);
                 return;
             }
+
             reactionEntity.changeReaction(reaction);
             reactionRepository.flush();
+            createActionLog(actorUserId, projectId, topicId, reaction);
+
         } catch (ObjectOptimisticLockingFailureException | OptimisticLockException | DataIntegrityViolationException e) {
             throw new BusinessException(ErrorCode.REACTION_CONFLICT);
         }
@@ -71,6 +79,22 @@ public class TopicReactionService {
     private void deleteReaction(ProjectTopicReaction reactionEntity) {
         reactionRepository.delete(reactionEntity);
         reactionRepository.flush();
+    }
+
+    private void createActionLog(Long actorUserId, Long projectId, Long topicId, Reaction reaction) {
+        actionLogService.createActionLog(
+                actorUserId,
+                projectId,
+                topicId,
+                toActionType(reaction)
+        );
+    }
+
+    private ActionType toActionType(Reaction reaction) {
+        return switch (reaction) {
+            case LIKE -> ActionType.LIKE;
+            case DISLIKE -> ActionType.DISLIKE;
+        };
     }
 
 }
