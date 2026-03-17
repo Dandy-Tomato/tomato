@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import lombok.RequiredArgsConstructor;
 import site.to_mato.recommendation.dto.request.RecommendationRequest;
+import site.to_mato.recommendation.dto.response.RecommendationApiResponse;
 import site.to_mato.recommendation.dto.response.RecommendationResponse;
 
 @Component
@@ -34,11 +35,16 @@ public class RecommendationClient {
         RecommendationRequest request = new RecommendationRequest(projectId, domainIds, preferenceEmbeddings);
         HttpEntity<RecommendationRequest> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<List<RecommendationResponse>> response = restTemplate.exchange(url, HttpMethod.valueOf("POST"),
+        ResponseEntity<RecommendationApiResponse> response = restTemplate.exchange(url, HttpMethod.valueOf("POST"),
                 entity,
-                new ParameterizedTypeReference<List<RecommendationResponse>>() {
+                new ParameterizedTypeReference<RecommendationApiResponse>() {
                 });
 
-        return response.getBody();
+        RecommendationApiResponse body = response.getBody();
+        if (body == null) {
+            return List.of();
+        }
+
+        return body.data();
     }
 }
