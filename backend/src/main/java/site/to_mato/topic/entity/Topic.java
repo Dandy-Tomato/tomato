@@ -1,9 +1,15 @@
 package site.to_mato.topic.entity;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import site.to_mato.catalog.entity.Domain;
 
 @Getter
+@NoArgsConstructor
 @Entity
 @Table(name = "topics")
 public class Topic {
@@ -13,28 +19,29 @@ public class Topic {
     @Column(name = "topic_id")
     private Long id;
 
-    @Column(name = "title")
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "expected_duration_week")
+    @Column(name = "expected_duration_week", nullable = false)
     private int expectedDurationWeek;
 
-    @Column(name = "recommended_team_size")
+    @Column(name = "recommended_team_size", nullable = false)
     private int recommendedTeamSize;
 
     @Column(name = "difficulty")
-    private int difficulty;
+    private Integer difficulty;
 
-    @Column(name = "tech_stacks")
-    private String techStacks;
+    @Column(name = "topic_embedding", columnDefinition = "vector(1536)")
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    private float[] topicEmbedding;
 
-    @Column(name = "domain_id")
-    private Long domainId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "domain_id", nullable = false)
+    private Domain domain;
 
-    @Column(name = "source_repo_id")
+    @Column(name = "source_repo_id", nullable = false)
     private Long sourceRepoId;
-
 }
