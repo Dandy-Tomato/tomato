@@ -1,35 +1,37 @@
 package site.to_mato.recommendation.dto.response;
 
+import java.util.List;
+
 public record RecommendationResponse(
         Long topicId,
         String topicTitle,
         String topicDescription,
-        Integer estimatedDevelopmentPeriod,
+        Integer estimatedDurationWeek,
         Integer recommendedTeamSize,
         Integer difficulty,
         Long domainId,
-        Long referenceRepoId,
-        Double recommendationScore) {
+        String domainName,
+        List<String> skills) {
 
     public static RecommendationResponse of(
             Long topicId,
             String topicTitle,
             String topicDescription,
-            Integer estimatedDevelopmentPeriod,
+            Integer estimatedDurationWeek,
             Integer recommendedTeamSize,
             Integer difficulty,
             Long domainId,
-            Long referenceRepoId,
-            Double recommendationScore) {
+            String domainName,
+            List<String> skills) {
         return new RecommendationResponse(
                 topicId,
                 topicTitle,
                 topicDescription,
-                estimatedDevelopmentPeriod,
+                estimatedDurationWeek,
                 recommendedTeamSize,
                 difficulty,
                 domainId,
-                referenceRepoId,
-                recommendationScore);
+                domainName,
+                skills);
     }
 }
