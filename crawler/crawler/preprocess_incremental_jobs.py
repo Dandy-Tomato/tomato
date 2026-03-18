@@ -13,23 +13,18 @@ from crawler.preprocess_new_jobs import (
     now_ts,
 )
 
-# 초기 raw 전처리 로직 재사용
 from init_preprocess_all import (
     extract_skill_candidates,
     canonicalize_skill,
     is_excluded_skill,
     looks_like_tech_skill,
     should_drop_token,
-    load_raw_by_code,
-    build_master_skills,
 )
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DB_READY_DIR = ROOT_DIR / "db_ready"
 
-# 신규 스킬을 증분에서 몇 번 이상 발견해야 추가할지
-# 형님 요청대로 "새로운 스킬이 나오면 업데이트"면 1이 맞습니다.
 NEW_SKILL_MIN_COUNT = 1
 
 
@@ -110,6 +105,18 @@ def normalize_skill_key(text: str) -> str:
     t = t.replace("&", "and")
     t = re.sub(r"[.\-_/+\s()]+", "", t)
     return t
+
+
+def get_run_date_folder_name() -> str:
+    return time.strftime("%y%m%d")
+
+
+def get_run_db_ready_dir(run_date: str | None = None) -> Path:
+    if run_date is None:
+        run_date = get_run_date_folder_name()
+    path = DB_READY_DIR / run_date
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def make_db_name_from_front_name(text: str) -> str:
@@ -210,7 +217,7 @@ def make_db_name_from_front_name(text: str) -> str:
         "lora": "lora",
         "onnx": "onnx",
         "edge ai": "edge_ai",
-        "freeRTOS": "freertos",
+        "freertos": "freertos",
     }
 
     if low in special_map:
@@ -322,27 +329,7 @@ def is_valid_skill_by_initial_rules(skill: str) -> bool:
     return True
 
 
-def load_base_master_skills_from_initial_raw(base_major_code: str = "10007") -> set[str]:
-    """
-    초기 init_preprocess_all.py 와 같은 기준:
-    10007 raw를 다시 읽어서 build_master_skills(min_count=2) 수행
-    """
-    base_df = load_raw_by_code(base_major_code)
-    if base_df.empty:
-        raise ValueError(
-            f"{base_major_code} raw 데이터를 읽지 못했습니다. "
-            f"init_preprocess_all.py 기준 master_skills를 만들 수 없습니다."
-        )
-
-    master_skills = build_master_skills(base_df, min_count=2)
-    master_skills = {canonicalize_skill(x) for x in master_skills if is_valid_skill_by_initial_rules(x)}
-    return {x for x in master_skills if x}
-
-
 def load_existing_valid_skills_from_skills_csv() -> set[str]:
-    """
-    기존 skills.csv에 있는 값 중 initial 핵심 규칙을 통과하는 스킬만 사용
-    """
     skills_path = DB_READY_DIR / "skills.csv"
     skills_df = load_csv_if_exists(
         skills_path,
@@ -364,9 +351,6 @@ def load_existing_valid_skills_from_skills_csv() -> set[str]:
 
 
 def build_incremental_skill_counter(details_df: pd.DataFrame) -> dict[str, int]:
-    """
-    이번 증분 상세 CSV에서 initial 핵심 규칙 전부 적용 후 스킬 카운트
-    """
     counter = {}
 
     for _, row in details_df.iterrows():
@@ -391,9 +375,6 @@ def extract_only_allowed_skills_from_incremental_row(
     row: pd.Series,
     allowed_skills: set[str],
 ) -> list[str]:
-    """
-    initial 핵심 규칙 전부 반영 + 최종 allowed_skills 안에 있는 것만 통과
-    """
     candidates = extract_skill_candidates(row)
 
     out = []
@@ -539,10 +520,6 @@ def load_skills_table_only() -> pd.DataFrame:
 # 3) state bootstrap
 # =========================
 def bootstrap_state_from_db_ready_if_needed(major_code: str, major_name: str):
-    """
-    state/index 파일이 없을 때만 현재 db_ready 기준으로 1회 초기화
-    회사 기준은 (domain_id, name) unique
-    """
     state_files = get_state_file_paths(major_code, major_name)
 
     required_paths = [
@@ -707,10 +684,6 @@ def append_new_skills_fast(
     next_ids: dict,
     skill_key_to_id: dict,
 ):
-    """
-    이번 버전은 신규 스킬을 실제로 추가한다.
-    단, pair_df_new 자체가 initial 핵심 규칙 전부 통과한 값들만 갖고 있어야 한다.
-    """
     if pair_df_new.empty:
         return (
             skills_df_existing.copy(),
@@ -923,9 +896,6 @@ def append_companies_fast(
     company_key_to_id: dict,
     next_ids: dict,
 ):
-    """
-    초기 전처리 쪽과 맞추어 (domain_id, 기업명) 기준 unique
-    """
     if pair_df_new.empty:
         return (
             company_key_to_id,
@@ -1100,7 +1070,73 @@ def save_processed_debug_files(
 
 
 # =========================
-# 10) 메인 실행 함수
+# 10) 날짜 폴더 저장
+# =========================
+def save_incremental_outputs_to_run_folder(
+    run_db_ready_dir: Path,
+    new_skills_df: pd.DataFrame,
+    actually_added_pair_df: pd.DataFrame,
+    new_companies_df: pd.DataFrame,
+    new_company_skills_df: pd.DataFrame,
+):
+    save_csv(new_skills_df, run_db_ready_dir / "skills.csv")
+    save_csv(actually_added_pair_df, run_db_ready_dir / "company_skill_pairs.csv")
+    save_csv(new_companies_df, run_db_ready_dir / "companies.csv")
+    save_csv(new_company_skills_df, run_db_ready_dir / "company_skills.csv")
+
+    meta_df = pd.DataFrame([{
+        "saved_at": now_ts(),
+        "skills_added": len(new_skills_df),
+        "pairs_added": len(actually_added_pair_df),
+        "companies_added": len(new_companies_df),
+        "company_skills_added": len(new_company_skills_df),
+    }])
+    save_csv(meta_df, run_db_ready_dir / "meta.csv")
+
+
+# =========================
+# 11) 루트 마스터 갱신
+# =========================
+def update_root_master_tables(
+    new_skills_df: pd.DataFrame,
+    actually_added_pair_df: pd.DataFrame,
+    new_companies_df: pd.DataFrame,
+    new_company_skills_df: pd.DataFrame,
+):
+    merged_skills_df = merge_and_replace_csv(
+        DB_READY_DIR / "skills.csv",
+        new_skills_df,
+        ["skill_id", "front_name", "db_name"],
+        dedupe_subset=["skill_id"],
+        sort_by=["skill_id"],
+    )
+    merged_pairs_df = merge_and_replace_csv(
+        DB_READY_DIR / "company_skill_pairs.csv",
+        actually_added_pair_df,
+        ["domain_id", "domain_name", "기업명", "스킬"],
+        dedupe_subset=["domain_id", "기업명", "스킬"],
+        sort_by=["domain_id", "기업명", "스킬"],
+    )
+    merged_companies_df = merge_and_replace_csv(
+        DB_READY_DIR / "companies.csv",
+        new_companies_df,
+        ["company_id", "name", "created_at", "updated_at", "domain_id"],
+        dedupe_subset=["domain_id", "name"],
+        sort_by=["company_id"],
+    )
+    merged_company_skills_df = merge_and_replace_csv(
+        DB_READY_DIR / "company_skills.csv",
+        new_company_skills_df,
+        ["company_skill_id", "company_id", "skill_id"],
+        dedupe_subset=["company_id", "skill_id"],
+        sort_by=["company_skill_id"],
+    )
+
+    return merged_skills_df, merged_pairs_df, merged_companies_df, merged_company_skills_df
+
+
+# =========================
+# 12) 메인 실행 함수
 # =========================
 def run_incremental_preprocess(
     major_code: str,
@@ -1113,6 +1149,10 @@ def run_incremental_preprocess(
 
     ensure_dirs(major_code, major_name)
     DB_READY_DIR.mkdir(parents=True, exist_ok=True)
+
+    run_date = get_run_date_folder_name()
+    run_db_ready_dir = get_run_db_ready_dir(run_date)
+    print(f"[INFO] run date folder: {run_db_ready_dir}", flush=True)
 
     state_files = get_state_file_paths(major_code, major_name)
     bootstrap_state_from_db_ready_if_needed(major_code, major_name)
@@ -1138,19 +1178,12 @@ def run_incremental_preprocess(
     print(f"[INFO] details csv: {details_path}", flush=True)
     print(f"[INFO] details rows: {len(details_df)}", flush=True)
 
-    # 1) 초기 raw 기준 base master
-    base_master_skills = load_base_master_skills_from_initial_raw("10007")
-    print(f"[INFO] base master skills from 10007 raw: {len(base_master_skills)}", flush=True)
-
-    # 2) 기존 skills.csv 중 유효 스킬
     existing_valid_skills = load_existing_valid_skills_from_skills_csv()
     print(f"[INFO] existing valid skills from skills.csv: {len(existing_valid_skills)}", flush=True)
 
-    # 3) 이번 증분에서 모든 핵심 규칙 통과한 스킬 카운트
     incremental_skill_counter = build_incremental_skill_counter(details_df)
     print(f"[INFO] incremental valid skill candidates: {len(incremental_skill_counter)}", flush=True)
 
-    # 4) 신규 스킬 허용
     new_valid_skills = {
         skill
         for skill, cnt in incremental_skill_counter.items()
@@ -1158,9 +1191,7 @@ def run_incremental_preprocess(
     }
     print(f"[INFO] new valid skills from incremental: {len(new_valid_skills)}", flush=True)
 
-    # 5) 최종 허용 스킬
     allowed_skills = set()
-    allowed_skills.update(base_master_skills)
     allowed_skills.update(existing_valid_skills)
     allowed_skills.update(new_valid_skills)
 
@@ -1169,7 +1200,6 @@ def run_incremental_preprocess(
 
     print(f"[INFO] total allowed skills: {len(allowed_skills)}", flush=True)
 
-    # 6) allowed_skills 기준으로 pair 생성
     pair_df_new_raw = build_company_skill_pairs_with_initial_rules(
         df=details_df,
         allowed_skills=allowed_skills,
@@ -1186,7 +1216,6 @@ def run_incremental_preprocess(
 
     existing_skills_df = load_skills_table_only()
 
-    # 7) 신규 스킬 실제 추가
     updated_skills_df, skill_resolution_map, new_skills_df, next_ids, skill_key_to_id = append_new_skills_fast(
         pair_df_new=pair_df_new_raw,
         skills_df_existing=existing_skills_df,
@@ -1194,7 +1223,6 @@ def run_incremental_preprocess(
         skill_key_to_id=skill_key_to_id,
     )
 
-    # 8) pair 스킬명을 최종 front_name으로 정규화
     pair_df_new = standardize_pair_skills(pair_df_new_raw, skill_resolution_map)
     pair_df_new = pair_df_new[pair_df_new["스킬"].map(is_valid_skill_by_initial_rules)].reset_index(drop=True)
     pair_df_new = dedupe_df(pair_df_new, ["domain_id", "기업명", "스킬"])
@@ -1243,33 +1271,21 @@ def run_incremental_preprocess(
         new_company_skills_df = dedupe_df(new_company_skills_df, ["company_skill_id"])
         new_company_skills_df = new_company_skills_df.sort_values("company_skill_id").reset_index(drop=True)
 
-    merged_skills_df = merge_and_replace_csv(
-        DB_READY_DIR / "skills.csv",
-        new_skills_df,
-        ["skill_id", "front_name", "db_name"],
-        dedupe_subset=["skill_id"],
-        sort_by=["skill_id"],
+    # 1) 날짜 폴더: 이번 증분에서 새로 추가된 것만 저장
+    save_incremental_outputs_to_run_folder(
+        run_db_ready_dir=run_db_ready_dir,
+        new_skills_df=new_skills_df,
+        actually_added_pair_df=actually_added_pair_df,
+        new_companies_df=new_companies_df,
+        new_company_skills_df=new_company_skills_df,
     )
-    merged_pairs_df = merge_and_replace_csv(
-        DB_READY_DIR / "company_skill_pairs.csv",
-        actually_added_pair_df,
-        ["domain_id", "domain_name", "기업명", "스킬"],
-        dedupe_subset=["domain_id", "기업명", "스킬"],
-        sort_by=["domain_id", "기업명", "스킬"],
-    )
-    merged_companies_df = merge_and_replace_csv(
-        DB_READY_DIR / "companies.csv",
-        new_companies_df,
-        ["company_id", "name", "created_at", "updated_at", "domain_id"],
-        dedupe_subset=["domain_id", "name"],
-        sort_by=["company_id"],
-    )
-    merged_company_skills_df = merge_and_replace_csv(
-        DB_READY_DIR / "company_skills.csv",
-        new_company_skills_df,
-        ["company_skill_id", "company_id", "skill_id"],
-        dedupe_subset=["company_id", "skill_id"],
-        sort_by=["company_skill_id"],
+
+    # 2) 루트 db_ready: 최신 마스터로 누적 갱신
+    merged_skills_df, merged_pairs_df, merged_companies_df, merged_company_skills_df = update_root_master_tables(
+        new_skills_df=new_skills_df,
+        actually_added_pair_df=actually_added_pair_df,
+        new_companies_df=new_companies_df,
+        new_company_skills_df=new_company_skills_df,
     )
 
     save_json_atomic(state_files["next_ids"], next_ids)
@@ -1295,14 +1311,15 @@ def run_incremental_preprocess(
     total_companies = int(len(merged_companies_df.drop_duplicates(subset=["domain_id", "name"]))) if not merged_companies_df.empty else 0
     total_company_skills = int(len(merged_company_skills_df.drop_duplicates(subset=["company_id", "skill_id"]))) if not merged_company_skills_df.empty else 0
 
+    print(f"[DONE] run folder={run_db_ready_dir}", flush=True)
     print(f"[DONE] added pairs={len(actually_added_pair_df)}", flush=True)
     print(f"[DONE] added skills={len(new_skills_df)}", flush=True)
     print(f"[DONE] added companies={len(new_companies_df)}", flush=True)
     print(f"[DONE] added company_skills={len(new_company_skills_df)}", flush=True)
-    print(f"[DONE] skills total={total_skills}", flush=True)
-    print(f"[DONE] pairs total={total_pairs}", flush=True)
-    print(f"[DONE] companies total={total_companies}", flush=True)
-    print(f"[DONE] company_skills total={total_company_skills}", flush=True)
+    print(f"[DONE] skills total(master)={total_skills}", flush=True)
+    print(f"[DONE] pairs total(master)={total_pairs}", flush=True)
+    print(f"[DONE] companies total(master)={total_companies}", flush=True)
+    print(f"[DONE] company_skills total(master)={total_company_skills}", flush=True)
 
     print("=" * 70, flush=True)
     print(f"[INCREMENTAL_PREPROCESS] finished {major_code} / {major_name}", flush=True)
@@ -1312,14 +1329,15 @@ def run_incremental_preprocess(
         "major_code": major_code,
         "major_name": major_name,
         "details_csv": str(details_path),
+        "run_db_ready_dir": str(run_db_ready_dir),
         "added_pairs": int(len(actually_added_pair_df)),
         "added_skills": int(len(new_skills_df)),
         "added_companies": int(len(new_companies_df)),
         "added_company_skills": int(len(new_company_skills_df)),
-        "total_skills": total_skills,
-        "total_pairs": total_pairs,
-        "total_companies": total_companies,
-        "total_company_skills": total_company_skills,
+        "total_skills_master": int(total_skills),
+        "total_pairs_master": int(total_pairs),
+        "total_companies_master": int(total_companies),
+        "total_company_skills_master": int(total_company_skills),
     }
 
 
