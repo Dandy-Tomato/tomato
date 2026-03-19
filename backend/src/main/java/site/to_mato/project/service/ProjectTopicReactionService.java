@@ -1,4 +1,4 @@
-package site.to_mato.topic.service;
+package site.to_mato.project.service;
 
 import jakarta.persistence.OptimisticLockException;
 import jakarta.transaction.Transactional;
@@ -12,17 +12,17 @@ import site.to_mato.project.entity.Project;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.recommendation.entity.enums.ActionType;
 import site.to_mato.recommendation.service.ActionLogService;
-import site.to_mato.topic.entity.ProjectTopicReaction;
+import site.to_mato.project.entity.ProjectTopicReaction;
 import site.to_mato.topic.entity.Topic;
-import site.to_mato.topic.entity.enums.Reaction;
-import site.to_mato.topic.repository.ProjectTopicReactionRepository;
+import site.to_mato.project.entity.enums.Reaction;
+import site.to_mato.project.repository.ProjectTopicReactionRepository;
 import site.to_mato.topic.repository.TopicRepository;
 
 import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class TopicReactionService {
+public class ProjectTopicReactionService {
 
     private final TopicRepository topicRepository;
     private final ActionLogService actionLogService;
@@ -30,7 +30,7 @@ public class TopicReactionService {
     private final ProjectTopicReactionRepository reactionRepository;
 
     @Transactional
-    public void react(Long actorUserId, Long projectId, Long topicId, Reaction reaction, Long version) {
+    public void setReaction(Long actorUserId, Long projectId, Long topicId, Reaction reaction, Long version) {
 
         ProjectTopicReaction reactionEntity =
                 reactionRepository

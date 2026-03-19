@@ -1,4 +1,4 @@
-package site.to_mato.topic.service;
+package site.to_mato.project.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -7,14 +7,14 @@ import site.to_mato.project.entity.Project;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.recommendation.entity.enums.ActionType;
 import site.to_mato.recommendation.service.ActionLogService;
-import site.to_mato.topic.entity.ProjectTopicBookmark;
+import site.to_mato.project.entity.ProjectTopicBookmark;
 import site.to_mato.topic.entity.Topic;
-import site.to_mato.topic.repository.ProjectTopicBookmarkRepository;
+import site.to_mato.project.repository.ProjectTopicBookmarkRepository;
 import site.to_mato.topic.repository.TopicRepository;
 
 @Service
 @RequiredArgsConstructor
-public class TopicBookmarkService {
+public class ProjectTopicBookmarkService {
 
     private final TopicRepository topicRepository;
     private final ActionLogService actionLogService;
@@ -24,9 +24,12 @@ public class TopicBookmarkService {
     @Transactional
     public boolean toggleBookmark(Long actorUserId, Long projectId, Long topicId) {
 
-        boolean isBookmarked = bookmarkRepository.existsByProjectIdAndTopicId(projectId, topicId);
-        if (isBookmarked) {
-            bookmarkRepository.deleteByProjectIdAndTopicId(projectId, topicId);
+        ProjectTopicBookmark bookmark = bookmarkRepository
+                .findByProjectIdAndTopicIdAndDeletedAtIsNull(projectId, topicId)
+                .orElse(null);
+
+        if (bookmark != null) {
+            bookmark.softDelete();
             return false;
         }
 
