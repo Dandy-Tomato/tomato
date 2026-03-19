@@ -2,21 +2,19 @@ from typing import List, Optional
 from app.schemas.base import CamelModel
 
 class RecommendationRequest(CamelModel):
-    projectId: int
-    domainIds: List[int]
-    preferenceEmbeddings: Optional[List[float]] = None
+    project_id: int
+    domain_ids: List[int]
+    preference_embeddings: Optional[List[float]] = None
     
 
 class TopicItem(CamelModel):
     topic_id: int
-    topic_title: str
-    topic_description: str
-    estimated_development_period: int
+    title: str
+    description: str
+    expected_duration_week: int
     recommended_team_size: int
-    difficulty: int
+    difficulty: Optional[int] = None
     domain_id: int
-    reference_repo_id: int
-    recommendation_score: float
-    
-class RecommendationResponse(CamelModel):
-    topics: List[TopicItem]
+    domain_name: str
+    source_repo_id: int
+    skills: List[str] = []
