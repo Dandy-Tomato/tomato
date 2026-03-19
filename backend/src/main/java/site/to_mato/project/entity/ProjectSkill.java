@@ -12,17 +12,17 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import site.to_mato.catalog.entity.Domain;
+import site.to_mato.catalog.entity.Skill;
 
 @Getter
 @Entity
-@Table(name = "project_domains")
+@Table(name = "project_skills")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ProjectDomain {
+public class ProjectSkill {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "project_domain_id")
+    @Column(name = "project_skill_id")
     private Long id;
 
     @Column(name = "weight")
@@ -33,6 +33,6 @@ public class ProjectDomain {
     private Project project;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "domain_id", nullable = false)
-    private Domain domain;
+    @JoinColumn(name = "skill_id", nullable = false)
+    private Skill skill;
 }

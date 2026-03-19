@@ -1,8 +1,11 @@
 package site.to_mato.project.entity;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import site.to_mato.common.entity.SoftDeleteEntity;
 import site.to_mato.user.entity.User;
 import site.to_mato.topic.entity.ChildTopic;
@@ -13,6 +16,7 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "projects")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Project extends SoftDeleteEntity {
 
     @Id
@@ -41,14 +45,15 @@ public class Project extends SoftDeleteEntity {
     @Column(name = "last_processed_action_log_id")
     private Long lastProcessedActionLogId;
 
-    @Column(name = "preference_embeddings")
-    private List<Float> preferenceEmbeddings;
+    @Column(name = "topic_embedding", columnDefinition = "vector(1536)")
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    private float[] preferenceEmbeddings;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
-    private User ownerId;
+    private User owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "confirmed_child_topic_id", nullable = true)
-    private ChildTopic confirmedChildTopicId;
+    @JoinColumn(name = "confirmed_child_topic_id")
+    private ChildTopic confirmedChildTopic;
 }
