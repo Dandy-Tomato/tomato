@@ -3,6 +3,7 @@ package site.to_mato.project.entity;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import site.to_mato.common.entity.SoftDeleteEntity;
 import site.to_mato.user.entity.User;
 import site.to_mato.topic.entity.ChildTopic;
 
@@ -12,7 +13,7 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "projects")
-public class Project {
+public class Project extends SoftDeleteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,15 +40,6 @@ public class Project {
 
     @Column(name = "last_processed_action_log_id")
     private Long lastProcessedActionLogId;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
 
     @Column(name = "preference_embeddings")
     private List<Float> preferenceEmbeddings;
