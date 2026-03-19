@@ -50,7 +50,6 @@ backend/src/main/resources/application*.properties
 crawler/data/**/raw/
 crawler/data/**/incremental_output/
 crawler/data/**/processed/
-crawler/db_ready/
 crawler/*.lock
 crawler/.venv/
 crawler/venv/
