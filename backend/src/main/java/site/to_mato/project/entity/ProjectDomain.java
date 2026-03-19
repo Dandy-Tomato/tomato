@@ -22,8 +22,8 @@ public class ProjectDomain {
     @Column(name = "project_domain_id")
     private Long id;
 
-    // @Column(name = "weight")
-    // private Long weight;
+     @Column(name = "weight")
+     private Long weight;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
