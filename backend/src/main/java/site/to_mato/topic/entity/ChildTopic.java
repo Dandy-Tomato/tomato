@@ -9,14 +9,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 import site.to_mato.project.entity.Project;
 
 @Getter
-@Setter
 @Entity
 @Table(name = "child_topics")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChildTopic {
 
     @Id

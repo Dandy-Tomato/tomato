@@ -1,5 +1,6 @@
 package site.to_mato.topic.entity;
 
+import lombok.AccessLevel;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -9,9 +10,9 @@ import lombok.NoArgsConstructor;
 import site.to_mato.catalog.entity.Domain;
 
 @Getter
-@NoArgsConstructor
 @Entity
 @Table(name = "topics")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Topic {
 
     @Id
