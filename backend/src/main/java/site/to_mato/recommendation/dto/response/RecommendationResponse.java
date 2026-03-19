@@ -4,9 +4,9 @@ import java.util.List;
 
 public record RecommendationResponse(
         Long topicId,
-        String topicTitle,
-        String topicDescription,
-        Integer estimatedDurationWeek,
+        String title,
+        String description,
+        Integer expectedDurationWeek,
         Integer recommendedTeamSize,
         Integer difficulty,
         Long domainId,
@@ -15,9 +15,9 @@ public record RecommendationResponse(
 
     public static RecommendationResponse of(
             Long topicId,
-            String topicTitle,
-            String topicDescription,
-            Integer estimatedDurationWeek,
+            String title,
+            String description,
+            Integer expectedDurationWeek,
             Integer recommendedTeamSize,
             Integer difficulty,
             Long domainId,
@@ -25,9 +25,9 @@ public record RecommendationResponse(
             List<String> skills) {
         return new RecommendationResponse(
                 topicId,
-                topicTitle,
-                topicDescription,
-                estimatedDurationWeek,
+                title,
+                description,
+                expectedDurationWeek,
                 recommendedTeamSize,
                 difficulty,
                 domainId,

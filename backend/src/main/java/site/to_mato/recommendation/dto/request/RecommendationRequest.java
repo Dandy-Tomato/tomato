@@ -5,5 +5,5 @@ import java.util.List;
 public record RecommendationRequest(
         Long projectId,
         List<Long> domainIds,
-        List<Float> preferenceEmbeddings) {
+        List<Float> preferenceEmbedding) {
 }
