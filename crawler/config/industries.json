@@ -1,0 +1,46 @@
+[
+  {
+    "major_code": "10001",
+    "major_name": "서비스업"
+  },
+  {
+    "major_code": "10002",
+    "major_name": "금융은행업"
+  },
+  {
+    "major_code": "10003",
+    "major_name": "건설업"
+  },
+  {
+    "major_code": "10004",
+    "major_name": "의료제약업"
+  },
+  {
+    "major_code": "10005",
+    "major_name": "미디어광고업"
+  },
+  {
+    "major_code": "10006",
+    "major_name": "문화예술디자인업"
+  },
+  {
+    "major_code": "10007",
+    "major_name": "IT정보통신업"
+  },
+  {
+    "major_code": "10008",
+    "major_name": "기관협회"
+  },
+  {
+    "major_code": "10009",
+    "major_name": "제조생산화학업"
+  },
+  {
+    "major_code": "10010",
+    "major_name": "판매유통업"
+  },
+  {
+    "major_code": "10011",
+    "major_name": "교육업"
+  }
+]
