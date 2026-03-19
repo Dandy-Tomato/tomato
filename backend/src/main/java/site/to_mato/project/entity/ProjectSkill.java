@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.catalog.entity.Skill;
@@ -35,4 +36,27 @@ public class ProjectSkill {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "skill_id", nullable = false)
     private Skill skill;
+
+    @Builder
+    private ProjectSkill(
+            Double weight,
+            Project project,
+            Skill skill
+    ) {
+        this.weight = weight;
+        this.project = project;
+        this.skill = skill;
+    }
+
+    public static ProjectSkill of(
+            Project project,
+            Skill skill,
+            Double weight
+    ) {
+        return ProjectSkill.builder()
+                .project(project)
+                .skill(skill)
+                .weight(weight)
+                .build();
+    }
 }

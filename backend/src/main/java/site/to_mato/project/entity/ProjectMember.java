@@ -2,10 +2,13 @@ package site.to_mato.project.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.common.entity.BaseEntity;
 import site.to_mato.user.entity.User;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Entity
@@ -29,4 +32,33 @@ public class ProjectMember extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Builder
+    private ProjectMember(
+            ProjectRole projectRole,
+            Project project,
+            User user
+    ) {
+        this.projectRole = projectRole;
+        this.project = project;
+        this.user = user;
+    }
+
+    public static ProjectMember of(
+            Project project,
+            User user,
+            ProjectRole projectRole
+    ) {
+        LocalDateTime now = LocalDateTime.now();
+
+        return ProjectMember.builder()
+                .project(project)
+                .user(user)
+                .projectRole(projectRole)
+                .build();
+    }
+
+    public void changeRole(ProjectRole projectRole) {
+        this.projectRole = projectRole;
+    }
 }
