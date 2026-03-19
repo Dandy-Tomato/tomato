@@ -1,7 +1,7 @@
-package site.to_mato.topic.repository;
+package site.to_mato.project.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import site.to_mato.topic.entity.ProjectTopicReaction;
+import site.to_mato.project.entity.ProjectTopicReaction;
 
 import java.util.Optional;
 

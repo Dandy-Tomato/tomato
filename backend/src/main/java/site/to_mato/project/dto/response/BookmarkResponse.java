@@ -1,4 +1,4 @@
-package site.to_mato.topic.dto.response;
+package site.to_mato.project.dto.response;
 
 public record BookmarkResponse(boolean isBookmarked) {
 }
