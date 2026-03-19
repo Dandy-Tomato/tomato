@@ -143,7 +143,12 @@ def load_industries():
 
 
 def get_industry_dir(major_code: str, major_name: str) -> Path:
-    return DATA_DIR / f"{major_code}_{major_name}"
+    folder_mapping = {
+        "10007_IT정보통신업": "10007_it_ict"
+    }
+    raw_name = f"{major_code}_{major_name}"
+    folder_name = folder_mapping.get(raw_name, raw_name)
+    return DATA_DIR / folder_name
 
 
 def find_raw_csv_for_industry(major_code: str, major_name: str) -> Path | None:
