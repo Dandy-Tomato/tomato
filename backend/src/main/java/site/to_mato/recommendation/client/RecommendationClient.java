@@ -1,7 +1,5 @@
 package site.to_mato.recommendation.client;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -12,12 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import site.to_mato.recommendation.dto.request.RecommendationRequest;
 import site.to_mato.recommendation.dto.response.RecommendationApiResponse;
-import site.to_mato.recommendation.dto.response.RecommendationResponse;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class RecommendationClient {
 
     private final RestTemplate restTemplate;
@@ -25,26 +24,21 @@ public class RecommendationClient {
     @Value("${fastapi.url}")
     private String fastApiUrl;
 
-    public List<RecommendationResponse> getRecommendations(Long projectId, List<Long> domainIds,
-            List<Float> preferenceEmbeddings) {
-        String url = fastApiUrl + "/recommendations";
-
+    public RecommendationApiResponse getRecommendations(RecommendationRequest request) {
+        log.info("[FastAPI URL] {}", fastApiUrl);  // 이거 추가
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        RecommendationRequest request = new RecommendationRequest(projectId, domainIds, preferenceEmbeddings);
         HttpEntity<RecommendationRequest> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<RecommendationApiResponse> response = restTemplate.exchange(url, HttpMethod.valueOf("POST"),
+        ResponseEntity<RecommendationApiResponse> response = restTemplate.exchange(
+                fastApiUrl + "/recommendations",
+                HttpMethod.POST,
                 entity,
                 new ParameterizedTypeReference<RecommendationApiResponse>() {
-                });
+                }
+        );
 
-        RecommendationApiResponse body = response.getBody();
-        if (body == null) {
-            return List.of();
-        }
-
-        return body.data();
+        return response.getBody();
     }
 }
