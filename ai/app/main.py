@@ -17,3 +17,7 @@ app.include_router(health_router)
 app.include_router(recommendation_router)
 
 register_exception_handlers(app)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

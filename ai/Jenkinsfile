@@ -1,0 +1,209 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        APP_DIR         = 'ai'
+        GIT_URL         = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
+        CHECKOUT_BRANCH = '*/develop'
+
+        AI_IMAGE        = 'nnnnnara/tomato-ai'
+
+        EC2_HOST        = 'j14a508.p.ssafy.io'
+        EC2_USER        = 'ubuntu'
+        DEPLOY_DIR      = '/home/ubuntu/tomato'
+        COMPOSE_FILE    = 'docker-compose.ai.prod.yml'
+    }
+
+    stages {
+        stage('Check Build Environment') {
+            steps {
+                sh '''
+                    set -eux
+                    whoami
+                    pwd
+                    echo "PATH=$PATH"
+                    command -v docker
+                    docker --version
+                    python3 --version || true
+                    ls -l /var/run/docker.sock || true
+                '''
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                deleteDir()
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: env.CHECKOUT_BRANCH]],
+                    userRemoteConfigs: [[
+                        url: env.GIT_URL,
+                        credentialsId: 'gitlab-http-creds'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Validate AI Files') {
+            steps {
+                dir("${env.APP_DIR}") {
+                    sh '''
+                        set -eux
+
+                        test -f Dockerfile
+                        test -f requirements.txt
+                        test -f app/main.py
+                        test -f app/settings.py
+                        test -f app/consumer/recommendation_event_consumer.py
+
+                        test -d app
+                        test -d app/consumer
+
+                        echo "[INFO] AI project structure is valid"
+                        find app -maxdepth 2 -type f | sort
+                    '''
+                }
+            }
+        }
+
+        stage('Build AI Image') {
+            steps {
+                dir("${env.APP_DIR}") {
+                    sh '''
+                        set -eux
+
+                        docker build \
+                          -t ${AI_IMAGE}:latest \
+                          -t ${AI_IMAGE}:${BUILD_NUMBER} \
+                          .
+                    '''
+                }
+            }
+        }
+
+        stage('Push AI Image') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKERHUB_USERNAME',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        set -eux
+
+                        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+                        docker push ${AI_IMAGE}:latest
+                        docker push ${AI_IMAGE}:${BUILD_NUMBER}
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh("""
+                        set -eux
+
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
+cd ${DEPLOY_DIR}
+
+if [ ! -f .env ]; then
+  echo "[ERROR] ${DEPLOY_DIR}/.env not found"
+  exit 1
+fi
+
+if [ ! -f ${COMPOSE_FILE} ]; then
+  echo "[ERROR] ${DEPLOY_DIR}/${COMPOSE_FILE} not found"
+  exit 1
+fi
+
+if ! docker network ls --format '{{.Name}}' | grep -qx 'tomato-net'; then
+  echo "[ERROR] docker network 'tomato-net' not found"
+  exit 1
+fi
+
+if grep -q '^AI_IMAGE=' .env; then
+  sed -i 's|^AI_IMAGE=.*|AI_IMAGE=${AI_IMAGE}:${BUILD_NUMBER}|' .env
+else
+  echo 'AI_IMAGE=${AI_IMAGE}:${BUILD_NUMBER}' >> .env
+fi
+
+echo '[INFO] Current AI_IMAGE in .env'
+grep '^AI_IMAGE=' .env
+
+echo '[INFO] Pull new AI image'
+docker compose --env-file .env -f ${COMPOSE_FILE} pull ai-api ai-consumer
+
+echo '[INFO] Recreate ai-api and ai-consumer'
+docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate ai-api ai-consumer
+
+echo '[INFO] Compose status'
+docker compose --env-file .env -f ${COMPOSE_FILE} ps
+
+echo '[INFO] AI API recent logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=50 ai-api || true
+
+echo '[INFO] AI Consumer recent logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=50 ai-consumer || true
+
+echo '[INFO] Remove dangling images'
+docker image prune -f
+REMOTE_SCRIPT
+                    """.stripIndent())
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh("""
+                        set -eux
+
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
+cd ${DEPLOY_DIR}
+
+echo '[INFO] Final compose status'
+docker compose --env-file .env -f ${COMPOSE_FILE} ps
+
+echo '[INFO] Verify ai-api container is running'
+docker ps --filter "name=tomato-ai-api" --filter "status=running"
+
+echo '[INFO] Verify ai-consumer container is running'
+docker ps --filter "name=tomato-ai-consumer" --filter "status=running"
+
+echo '[INFO] Last ai-api logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=30 ai-api || true
+
+echo '[INFO] Last ai-consumer logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=30 ai-consumer || true
+REMOTE_SCRIPT
+                    """.stripIndent())
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'AI image build and deployment succeeded.'
+        }
+
+        failure {
+            echo 'AI image build or deployment failed.'
+        }
+
+        always {
+            deleteDir()
+        }
+    }
+}
