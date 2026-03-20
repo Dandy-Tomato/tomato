@@ -26,11 +26,11 @@ public class UserService {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()
+        List<Long> skillIds = userSkillRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId).stream()
                 .map(userSkill -> userSkill.getSkill().getId())
                 .toList();
 
-        List<Long> companyIds = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
+        List<Long> companyIds = userDesiredCompanyRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId).stream()
                 .map(userCompany -> userCompany.getCompany().getId())
                 .toList();
 
@@ -48,11 +48,11 @@ public class UserService {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()
+        List<Long> skillIds = userSkillRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId).stream()
                 .map(userSkill -> userSkill.getSkill().getId())
                 .toList();
 
-        List<Long> companyIds = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
+        List<Long> companyIds = userDesiredCompanyRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId).stream()
                 .map(userCompany -> userCompany.getCompany().getId())
                 .toList();
 

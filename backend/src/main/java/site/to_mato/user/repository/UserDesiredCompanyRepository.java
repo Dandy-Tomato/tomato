@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface UserDesiredCompanyRepository extends JpaRepository<UserDesiredCompany, Long> {
 
-    List<UserDesiredCompany> findAllByUser_Id(Long userId);
+    List<UserDesiredCompany> findAllByUser_IdAndUser_DeletedAtIsNull(Long userId);
 
     void deleteAllByUser(User user);
 }
