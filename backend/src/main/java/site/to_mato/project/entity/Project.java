@@ -1,8 +1,9 @@
 package site.to_mato.project.entity;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -31,10 +32,10 @@ public class Project extends SoftDeleteEntity {
     private String description;
 
     @Column(name = "started_at")
-    private LocalDateTime startedAt;
+    private LocalDate startedAt;
 
     @Column(name = "due_at")
-    private LocalDateTime dueAt;
+    private LocalDate dueAt;
 
     @Column(name = "invite_code")
     private String inviteCode;
@@ -57,4 +58,42 @@ public class Project extends SoftDeleteEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "confirmed_child_topic_id")
     private ChildTopic confirmedChildTopic;
+
+    @Builder
+    private Project(
+            User owner,
+            String name,
+            String description,
+            LocalDate startedAt,
+            LocalDate dueAt,
+            String inviteCode,
+            boolean topicState
+    ) {
+        this.owner = owner;
+        this.name = name;
+        this.description = description;
+        this.startedAt = startedAt;
+        this.dueAt = dueAt;
+        this.inviteCode = inviteCode;
+        this.topicState = topicState;
+    }
+
+    public static Project create(
+            User owner,
+            String name,
+            String description,
+            LocalDate startedAt,
+            LocalDate dueAt,
+            String inviteCode
+    ) {
+        return Project.builder()
+                .owner(owner)
+                .name(name)
+                .description(description)
+                .startedAt(startedAt)
+                .dueAt(dueAt)
+                .inviteCode(inviteCode)
+                .topicState(false)
+                .build();
+    }
 }

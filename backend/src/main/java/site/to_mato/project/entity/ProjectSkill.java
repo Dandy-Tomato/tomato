@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.catalog.entity.Skill;
@@ -26,7 +27,7 @@ public class ProjectSkill {
     private Long id;
 
     @Column(name = "weight")
-    private Double weight;
+    private double weight;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
@@ -35,4 +36,35 @@ public class ProjectSkill {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "skill_id", nullable = false)
     private Skill skill;
+
+    @Builder(access = AccessLevel.PRIVATE)
+    private ProjectSkill(
+            Project project,
+            Skill skill,
+            double weight
+    ) {
+        this.project = project;
+        this.skill = skill;
+        this.weight = weight;
+    }
+
+    public static ProjectSkill of(Project project, Skill skill, double weight) {
+        return ProjectSkill.builder()
+                .project(project)
+                .skill(skill)
+                .weight(weight)
+                .build();
+    }
+
+    public void increaseWeight(double weight) {
+        this.weight += weight;
+    }
+
+    public void decreaseWeight(double amount) {
+        this.weight -= amount;
+    }
+
+    public boolean isWeightZeroOrNegative() {
+        return this.weight <= 0;
+    }
 }
