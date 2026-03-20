@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './SignupPage.css';
-import { POSITIONS, SKILLS, DUMMY_COMPANIES } from './constants';
+import { POSITIONS, SKILLS } from './constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -29,6 +29,8 @@ const SignupPage = () => {
         companies: [] // {id, name}
     });
     const [companySearch, setCompanySearch] = useState('');
+    const [companyResults, setCompanyResults] = useState([]);
+    const [isCompanyLoading, setIsCompanyLoading] = useState(false);
 
     // Step 3 State (Tech Stack)
     const [techStack, setTechStack] = useState({
@@ -136,19 +138,52 @@ const SignupPage = () => {
     };
 
     // Step 2 Handlers
-    const addCompany = () => {
-        if (!companySearch.trim()) return;
-        // Check if the company is already added to prevent duplicates
-        if (profile.companies.some(c => c.name.toLowerCase() === companySearch.trim().toLowerCase())) {
+    useEffect(() => {
+        const fetchCompanies = async () => {
+            if (companySearch.trim()) {
+                setIsCompanyLoading(true);
+                try {
+                    console.log("Fetching companies for keyword:", companySearch);
+                    const response = await fetch(`${API_BASE_URL}/companies/search/auto-complete?keyword=${encodeURIComponent(companySearch)}`);
+                    const result = await response.json();
+                    console.log("Company Search API Result:", result);
+                    if (response.ok && result.data) {
+                        const dataArray = Array.isArray(result.data) ? result.data : (result.data.content || []);
+                        const filtered = dataArray.filter(c => !profile.companies.some(pc => pc.id === c.id));
+                        setCompanyResults(filtered);
+                    } else {
+                        console.error("Company search failed:", result);
+                        setCompanyResults([]);
+                    }
+                } catch (error) {
+                    console.error("Company search error:", error);
+                    setCompanyResults([]);
+                } finally {
+                    setIsCompanyLoading(false);
+                }
+            } else {
+                setCompanyResults([]);
+                setIsCompanyLoading(false);
+            }
+        };
+
+        const timer = setTimeout(fetchCompanies, 300);
+        return () => clearTimeout(timer);
+    }, [companySearch, profile.companies]);
+
+    const addCompany = (company) => {
+        if (!company) return;
+        // Check if the company is already added
+        if (profile.companies.some(c => c.id === company.id)) {
             alert('이미 추가된 기업입니다.');
             return;
         }
-        const newId = Date.now(); // 임시 ID
         setProfile(prev => ({
             ...prev,
-            companies: [...prev.companies, { id: newId, name: companySearch.trim() }]
+            companies: [...prev.companies, { id: company.id, name: company.name }]
         }));
         setCompanySearch('');
+        setCompanyResults([]);
     };
 
     const removeCompany = (id) => {
@@ -156,18 +191,6 @@ const SignupPage = () => {
     };
 
     // Step 3 Handlers
-    useEffect(() => {
-        if (skillSearch) {
-            const results = SKILLS.filter(s =>
-                s.name.toLowerCase().includes(skillSearch.toLowerCase()) &&
-                !techStack.skills.some(ts => ts.id === s.id)
-            ).slice(0, 5);
-            setSkillResults(results);
-        } else {
-            setSkillResults([]);
-        }
-    }, [skillSearch, techStack.skills]);
-
     const addSkill = (skill) => {
         setTechStack(prev => ({ ...prev, skills: [...prev.skills, skill] }));
         setSkillSearch('');
@@ -273,10 +296,61 @@ const SignupPage = () => {
             <div className="signup-form-group">
                 <label>취업을 희망하는 기업을 추가해주세요.</label>
                 <div className="input-with-button">
-                    <div className="input-wrapper">
-                        <input type="text" placeholder="기업명을 입력해주세요." value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} />
+                    <div style={{ flex: 1, position: 'relative' }}>
+                        <div className="input-wrapper">
+                            <input
+                                type="text"
+                                placeholder="기업명을 입력해주세요."
+                                value={companySearch}
+                                onChange={(e) => setCompanySearch(e.target.value)}
+                            />
+                        </div>
+                        {(isCompanyLoading || (companySearch.trim() && companyResults.length >= 0)) && companySearch.trim() && (
+                            <ul className="search-results" style={{
+                                position: 'absolute', top: '100%', left: 0, right: 0,
+                                backgroundColor: 'white', border: '2px solid #E57358', borderRadius: '10px',
+                                boxShadow: '0 10px 20px rgba(0,0,0,0.15)', zIndex: 999999,
+                                maxHeight: '250px', overflowY: 'auto', padding: '0', margin: '5px 0 0 0',
+                                listStyle: 'none'
+                            }}>
+                                {isCompanyLoading ? (
+                                    <li style={{ padding: '15px', color: '#999', textAlign: 'center' }}>검색 중...</li>
+                                ) : (
+                                    <>
+                                        {companyResults.length > 0 ? (
+                                            companyResults.map(c => (
+                                                <li
+                                                    key={c.id}
+                                                    className="result-item"
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        addCompany(c);
+                                                    }}
+                                                    style={{
+                                                        padding: '12px 18px', cursor: 'pointer',
+                                                        borderBottom: '1px solid #eee', color: '#333', backgroundColor: '#fff'
+                                                    }}
+                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fff5f5'}
+                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                                                >
+                                                    {c.name}
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <li style={{ padding: '15px', color: '#999', textAlign: 'center' }}>결과가 없습니다.</li>
+                                        )}
+                                    </>
+                                )}
+                            </ul>
+                        )}
                     </div>
-                    <button className="check-button" onClick={addCompany}>추가</button>
+                    <button className="check-button" onClick={() => {
+                        if (companyResults.length > 0) {
+                            addCompany(companyResults[0]);
+                        } else if (companySearch.trim()) {
+                            alert("검색 결과에서 기업을 선택해 주세요.");
+                        }
+                    }}>추가</button>
                 </div>
                 <div className="tag-container">
                     {profile.companies.map(c => (
