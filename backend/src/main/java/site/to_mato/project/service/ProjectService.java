@@ -10,7 +10,7 @@ import site.to_mato.catalog.repository.SkillRepository;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.project.dto.request.CreateProjectRequest;
-import site.to_mato.project.dto.response.CreateProjectResponse;
+import site.to_mato.project.dto.response.ProjectIdResponse;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectMember;
 import site.to_mato.project.repository.ProjectMemberRepository;
@@ -38,7 +38,7 @@ public class ProjectService {
     private final ProjectProfileService projectProfileService;
 
     @Transactional
-    public CreateProjectResponse createProject(Long userId, CreateProjectRequest request) {
+    public ProjectIdResponse createProject(Long userId, CreateProjectRequest request) {
         if (request.dueAt().isBefore(request.startedAt())) {
             throw new BusinessException(ErrorCode.INVALID_PROJECT_DATE_RANGE);
         }
@@ -63,7 +63,7 @@ public class ProjectService {
         projectProfileService.addMemberProfile(project, owner);
         projectProfileService.addSelectedProfile(project, selectedSkills, selectedDomains);
 
-        return CreateProjectResponse.of(project.getId());
+        return ProjectIdResponse.of(project.getId());
     }
 
     private List<Skill> getSelectedSkills(List<Long> skillIds) {
