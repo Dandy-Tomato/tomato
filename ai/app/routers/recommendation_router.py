@@ -33,7 +33,7 @@ def recommend(
     # 실행 시간 측정용
     elapsed = time.time() - start
     logger.info(
-        f"[v1] 전체 처리: {elapsed:.3f}s | "
+        f"전체 처리: {elapsed:.3f}s | "
         f"반환 건수: {len(topics)}건"
     )
 
