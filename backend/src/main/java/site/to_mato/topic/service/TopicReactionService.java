@@ -8,7 +8,6 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
-import site.to_mato.project.entity.Project;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.topic.entity.ProjectTopicReaction;
 import site.to_mato.topic.entity.Topic;

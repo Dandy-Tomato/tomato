@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.common.entity.BaseEntity;
-import site.to_mato.project.entity.Project;
 
 @Getter
 @Entity

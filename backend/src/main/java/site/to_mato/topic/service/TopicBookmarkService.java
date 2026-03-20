@@ -3,7 +3,6 @@ package site.to_mato.topic.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import site.to_mato.project.entity.Project;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.topic.entity.ProjectTopicBookmark;
 import site.to_mato.topic.entity.Topic;
