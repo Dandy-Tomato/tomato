@@ -6,26 +6,8 @@ public record UserProfileResponse(
         String email,
         String nickname,
         String githubUsername,
-        Long position,
+        Long positionId,
         List<Long> skillIds,
-        List<Long> companyIds
+        List<String> companyNames
 ) {
-
-    public static UserProfileResponse of(
-            String email,
-            String nickname,
-            String githubUsername,
-            Long position,
-            List<Long> skillIds,
-            List<Long> companyIds
-    ) {
-        return new UserProfileResponse(
-                email,
-                nickname,
-                githubUsername,
-                position,
-                skillIds,
-                companyIds
-        );
-    }
 }
