@@ -35,6 +35,13 @@ public enum ErrorCode {
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, 3003, "존재하지 않는 회사입니다."),
     SKILL_NOT_FOUND(HttpStatus.NOT_FOUND, 3004, "존재하지 않는 기술 스택입니다."),
     PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, 3005, "존재하지 않는 프로젝트입니다."),
+    DOMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, 3006, "존재하지 않는 도메인입니다."),
+
+    // =========================
+    // 3500: PROJECT
+    // =========================
+    INVALID_PROJECT_DATE_RANGE(HttpStatus.BAD_REQUEST, 3500, "프로젝트 날짜 범위가 올바르지 않습니다."),
+    PROJECT_OWNER_CANNOT_LEAVE(HttpStatus.BAD_REQUEST, 3501, "OWNER는 프로젝트를 나갈 수 없습니다."),
 
     // =========================
     // 4000: TEAM
