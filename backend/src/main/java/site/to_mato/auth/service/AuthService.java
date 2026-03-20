@@ -59,7 +59,7 @@ public class AuthService {
 
     @Transactional
     public void updateProfile(Long userId, OnboardingRequest req) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Position position = null;
@@ -75,7 +75,10 @@ public class AuthService {
         );
 
         userDesiredCompanyRepository.deleteAllByUser(user);
+        userDesiredCompanyRepository.flush();
+
         userSkillRepository.deleteAllByUser(user);
+        userSkillRepository.flush();
 
         if (req.companyIds() != null && !req.companyIds().isEmpty()) {
             saveUserDesiredCompanies(user, req.companyIds());
@@ -110,8 +113,8 @@ public class AuthService {
     }
 
     public TokenResponse refresh(String oldRefreshToken) {
-
-        if (oldRefreshToken == null || oldRefreshToken.isBlank()
+        if (oldRefreshToken == null
+                || oldRefreshToken.isBlank()
                 || !jwtTokenProvider.validateToken(oldRefreshToken)) {
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);
         }
@@ -121,7 +124,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_REVOKED);
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         String role = user.getRole().name();
@@ -141,7 +144,7 @@ public class AuthService {
 
     @Transactional
     public void signout(Long userId, String refreshToken) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (refreshToken != null && !refreshToken.isBlank()) {
@@ -162,7 +165,7 @@ public class AuthService {
 
         List<Company> companies = companyRepository.findAllById(distinctCompanyIds);
 
-        if (companies.size() != companyIds.size()) {
+        if (companies.size() != distinctCompanyIds.size()) {
             throw new BusinessException(ErrorCode.COMPANY_NOT_FOUND);
         }
 
@@ -184,7 +187,7 @@ public class AuthService {
 
         List<Skill> skills = skillRepository.findAllById(distinctSkillIds);
 
-        if (skills.size() != skillIds.size()) {
+        if (skills.size() != distinctSkillIds.size()) {
             throw new BusinessException(ErrorCode.SKILL_NOT_FOUND);
         }
 

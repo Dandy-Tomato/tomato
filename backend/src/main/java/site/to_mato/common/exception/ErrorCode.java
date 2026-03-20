@@ -34,6 +34,7 @@ public enum ErrorCode {
     POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, 3002, "존재하지 않는 직무입니다."),
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, 3003, "존재하지 않는 회사입니다."),
     SKILL_NOT_FOUND(HttpStatus.NOT_FOUND, 3004, "존재하지 않는 기술 스택입니다."),
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, 3005, "존재하지 않는 프로젝트입니다."),
 
     // =========================
     // 4000: TEAM

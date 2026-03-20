@@ -23,7 +23,7 @@ public class UserService {
     private final UserDesiredCompanyRepository userDesiredCompanyRepository;
 
     public UserProfileResponse getMyProfile(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()
@@ -45,7 +45,7 @@ public class UserService {
     }
 
     public UserProfileResponse getUserProfile(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()

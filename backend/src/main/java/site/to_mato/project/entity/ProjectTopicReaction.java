@@ -1,4 +1,4 @@
-package site.to_mato.topic.entity;
+package site.to_mato.project.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.common.entity.BaseEntity;
-import site.to_mato.project.entity.Project;
-import site.to_mato.topic.entity.enums.Reaction;
+import site.to_mato.project.entity.enums.Reaction;
+import site.to_mato.topic.entity.Topic;
 
 @Getter
 @Entity
@@ -58,7 +58,6 @@ public class ProjectTopicReaction extends BaseEntity {
                 .reaction(reaction)
                 .build();
     }
-
 
     public void changeReaction(Reaction reaction) {
         this.reaction = reaction;

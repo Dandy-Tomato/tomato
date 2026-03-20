@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from app.routers.health import router as health_router
+from app.routers.recommendation_router import router as recommendation_router
 from app.settings import settings
 from app.common.exception_handlers import register_exception_handlers
 
@@ -13,5 +14,6 @@ app = FastAPI(
 )
 
 app.include_router(health_router)
+app.include_router(recommendation_router)
 
 register_exception_handlers(app)

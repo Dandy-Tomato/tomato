@@ -45,9 +45,10 @@ public class Project extends SoftDeleteEntity {
     @Column(name = "last_processed_action_log_id")
     private Long lastProcessedActionLogId;
 
-    @Column(name = "topic_embedding", columnDefinition = "vector(1536)")
+    @Column(name = "preference_embedding", columnDefinition = "vector(1536)")
     @JdbcTypeCode(SqlTypes.VECTOR)
-    private float[] preferenceEmbeddings;
+    @Transient
+    private float[] preferenceEmbedding;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
