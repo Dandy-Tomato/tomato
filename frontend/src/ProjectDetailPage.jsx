@@ -3,7 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import './ProjectDetailPage.css';
 import { SKILLS, DOMAINS, POSITIONS } from './constants';
-import { MdEdit, MdDelete, MdContentCopy, MdPeople, MdInfo, MdDateRange, MdLabel } from 'react-icons/md';
+import { 
+    MdEdit, MdContentCopy, MdKeyboardArrowDown, MdKeyboardArrowUp,
+    MdAutoAwesome, MdSearch, MdBookmarkBorder, MdHistory, MdBookmark
+} from 'react-icons/md';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -12,20 +15,15 @@ const ProjectDetailPage = () => {
     const navigate = useNavigate();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editData, setEditData] = useState({
-        name: '',
-        description: '',
-        startedAt: '',
-        dueAt: '',
-        techSkillIds: [],
-        domainIds: []
-    });
+    const [isDetailsOpen, setIsDetailsOpen] = useState(true);
+    const [activeTab, setActiveTab] = useState('추천 주제');
+    const [recommendations, setRecommendations] = useState([]);
 
-    const currentUserId = Number(localStorage.getItem('userId')); // 로그인 시 저장 필요
+    const currentUserId = Number(localStorage.getItem('userId'));
 
     useEffect(() => {
         fetchProjectDetail();
+        fetchRecommendations();
     }, [projectId]);
 
     const fetchProjectDetail = async () => {
@@ -37,14 +35,6 @@ const ProjectDetailPage = () => {
             const result = await response.json();
             if (response.ok && result.data) {
                 setProject(result.data);
-                setEditData({
-                    name: result.data.name,
-                    description: result.data.description,
-                    startedAt: result.data.startedAt,
-                    dueAt: result.data.dueAt,
-                    techSkillIds: result.data.techSkillIds || [],
-                    domainIds: result.data.domains || []
-                });
             } else {
                 alert("프로젝트 정보를 불러오지 못했습니다.");
                 navigate('/main');
@@ -56,52 +46,26 @@ const ProjectDetailPage = () => {
         }
     };
 
-    const handleDelete = async () => {
-        if (!window.confirm("정말로 이 프로젝트를 삭제하시겠습니까?")) return;
-
+    const fetchRecommendations = async () => {
         const token = localStorage.getItem("accessToken");
         try {
-            const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-                method: 'DELETE',
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/recommendations`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                alert("프로젝트가 삭제되었습니다.");
-                navigate('/main');
-            } else {
-                alert("삭제에 실패했습니다.");
+            const result = await response.json();
+            if (response.ok && result.data) {
+                setRecommendations(result.data);
             }
         } catch (error) {
-            console.error("Error deleting project:", error);
-        }
-    };
-
-    const handleUpdate = async () => {
-        const token = localStorage.getItem("accessToken");
-        try {
-            const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(editData)
-            });
-            if (response.ok) {
-                alert("프로젝트 정보가 수정되었습니다.");
-                setIsEditing(false);
-                fetchProjectDetail();
-            } else {
-                alert("수정에 실패했습니다.");
-            }
-        } catch (error) {
-            console.error("Error updating project:", error);
+            console.error("Error fetching recommendations:", error);
         }
     };
 
     const copyInviteCode = () => {
-        navigator.clipboard.writeText(project.inviteCode);
-        alert("초대 코드가 복사되었습니다.");
+        if (project?.inviteCode) {
+            navigator.clipboard.writeText(project.inviteCode);
+            alert("초대 코드가 복사되었습니다.");
+        }
     };
 
     if (loading) return <div className="loading">로딩 중...</div>;
@@ -109,100 +73,106 @@ const ProjectDetailPage = () => {
 
     const isOwner = project.owner.userId === currentUserId;
     const getDomainName = (id) => DOMAINS.find(d => d.id === id)?.name || id;
-    const getPositionName = (id) => POSITIONS.find(p => p.id === id)?.name || 'N/A';
+    const getPositionName = (id) => POSITIONS.find(p => p.id === id)?.name || '기타';
 
     return (
         <div className="project-detail-page">
             <Navbar />
             <main className="project-detail-content">
-                <div className="detail-card">
-                    {isEditing ? (
-                        <div className="edit-form">
-                            <h2>프로젝트 정보 수정</h2>
-                            <div className="form-group">
-                                <label className="form-label">프로젝트명</label>
-                                <input 
-                                    className="form-input" 
-                                    value={editData.name}
-                                    onChange={(e) => setEditData({...editData, name: e.target.value})}
-                                />
+                
+                {/* 프로젝트 헤더 카드 */}
+                <div className="project-header-card">
+                    <div className="header-main">
+                        <div className="header-left">
+                            <div className="title-row" onClick={() => setIsDetailsOpen(!isDetailsOpen)}>
+                                <h1 className="project-name">{project.name}</h1>
+                                {isDetailsOpen ? <MdKeyboardArrowUp className="toggle-icon" /> : <MdKeyboardArrowDown className="toggle-icon" />}
                             </div>
-                            <div className="form-group">
-                                <label className="form-label">설명</label>
-                                <textarea 
-                                    className="form-textarea" 
-                                    value={editData.description}
-                                    onChange={(e) => setEditData({...editData, description: e.target.value})}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">기간</label>
-                                <div className="date-range">
-                                    <input type="date" value={editData.startedAt} onChange={(e) => setEditData({...editData, startedAt: e.target.value})}/>
-                                    <span>~</span>
-                                    <input type="date" value={editData.dueAt} onChange={(e) => setEditData({...editData, dueAt: e.target.value})}/>
+                            <p className="project-meta">{project.startedAt} - {project.dueAt}</p>
+                            <p className="project-owner">{project.owner.nickname}~</p>
+                        </div>
+                        <div className="header-right">
+                            <span className="member-count-badge">👥 {project.memberCount}명</span>
+                            <button className="copy-code-button" onClick={copyInviteCode}>
+                                <MdContentCopy className="btn-icon" /> 초대코드 복사하기
+                            </button>
+                            {isOwner && (
+                                <button className="edit-icon-button" onClick={() => navigate(`/projects/create?edit=${projectId}`)}>
+                                    <MdEdit />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {isDetailsOpen && (
+                        <div className="header-details">
+                            <div className="domain-section">
+                                <p className="detail-label">도메인</p>
+                                <div className="detail-tags">
+                                    {project.domains.map(id => (
+                                        <span key={id} className="detail-tag">{getDomainName(id)}</span>
+                                    ))}
                                 </div>
                             </div>
-                            <div className="form-actions">
-                                <button className="cancel-button" onClick={() => setIsEditing(false)}>취소</button>
-                                <button className="save-button" onClick={handleUpdate}>저장하기</button>
+                            <div className="members-section">
+                                <p className="detail-label">참여자</p>
+                                <div className="member-cards-grid">
+                                    {project.members.map(member => (
+                                        <div key={member.userId} className="member-small-card">
+                                            <span className="m-name">{member.nickname || '익명'}</span>
+                                            <span className="m-pos">{getPositionName(member.positionId)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="detail-footer">
+                                <button className="leave-project-btn">프로젝트 나가기</button>
                             </div>
                         </div>
-                    ) : (
-                        <>
-                            <div className="detail-header">
-                                <div className="header-info">
-                                    <div className="status-badges">
-                                        <span className="badge owner">팀장: {project.owner.nickname}</span>
-                                        <span className="badge date">{project.startedAt} ~ {project.dueAt}</span>
+                    )}
+                </div>
+
+                {/* 추천 주제 섹션 */}
+                <div className="recommend-container">
+                    <aside className="recommend-sidebar">
+                        <div 
+                            className={`sidebar-item ${activeTab === '추천 주제' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('추천 주제')}
+                        >
+                            <MdAutoAwesome className="s-icon" /> 추천 주제
+                        </div>
+                        <div className="sidebar-item"><MdSearch className="s-icon" /> 주제 검색</div>
+                        <div className="sidebar-item"><MdBookmarkBorder className="s-icon" /> 북마크</div>
+                        <div className="sidebar-item"><MdHistory className="s-icon" /> 히스토리</div>
+                    </aside>
+
+                    <section className="recommend-main">
+                        <div className="recommend-header">
+                            <h2 className="recommend-title">{activeTab}</h2>
+                            <span className="recommend-count">6 / 30</span>
+                        </div>
+
+                        <div className="topic-grid">
+                            {recommendations.map(topic => (
+                                <div key={topic.topicId} className="topic-card">
+                                    <div className="topic-card-header">
+                                        <h3 className="topic-title">{topic.title}</h3>
+                                        {topic.bookmarked ? <MdBookmark className="bookmark-icon active" /> : <MdBookmarkBorder className="bookmark-icon" />}
                                     </div>
-                                    <h1>{project.name}</h1>
-                                    <div className="invite-code-wrapper">
-                                        <span className="meta-label">초대 코드: </span>
-                                        <span className="meta-value">{project.inviteCode}</span>
-                                        <button className="copy-button" onClick={copyInviteCode}><MdContentCopy /> 복사</button>
+                                    <div className="topic-domain-tag">{topic.domainName}</div>
+                                    <div className="topic-footer">
+                                        <div className="topic-skills">
+                                            {topic.skills.map(s => <span key={s} className="t-skill-tag">{s}</span>)}
+                                        </div>
                                     </div>
                                 </div>
-                                {isOwner && (
-                                    <div className="header-actions">
-                                        <button className="icon-button" onClick={() => setIsEditing(true)}><MdEdit /></button>
-                                        <button className="icon-button delete" onClick={handleDelete}><MdDelete /></button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <section className="detail-section">
-                                <h2 className="section-title"><MdInfo /> 프로젝트 설명</h2>
-                                <p className="description-text">{project.description}</p>
-                            </section>
-
-                            <div className="meta-grid">
-                                <section className="detail-section">
-                                    <h2 className="section-title"><MdLabel /> 산업 도메인</h2>
-                                    <div className="selected-tags">
-                                        {project.domains.map(id => (
-                                            <span key={id} className="tag">{getDomainName(id)}</span>
-                                        ))}
-                                    </div>
-                                </section>
-                                <section className="detail-section">
-                                    <h2 className="section-title"><MdPeople /> 참여 멤버 ({project.memberCount}명)</h2>
-                                    <div className="members-grid">
-                                        {project.members.map(member => (
-                                            <div key={member.userId} className="member-card">
-                                                <div className="member-avatar">{member.nickname?.[0] || '?'}</div>
-                                                <div className="member-info">
-                                                    <span className="member-name">{member.nickname || '익명'}</span>
-                                                    <span className="member-role">{member.projectRole}</span>
-                                                    <span className="member-position">{getPositionName(member.positionId)}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            </div>
-                        </>
-                    )}
+                            ))}
+                        </div>
+                        
+                        <div className="more-button-container">
+                            <button className="more-btn"><MdAdd className="btn-icon" /> 더보기</button>
+                        </div>
+                    </section>
                 </div>
             </main>
         </div>

@@ -9,6 +9,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 
 const ProjectCreatePage = () => {
     const navigate = useNavigate();
+    const queryParams = new URLSearchParams(window.location.search);
+    const editProjectId = queryParams.get('edit');
+    const isEditMode = !!editProjectId;
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -18,9 +22,42 @@ const ProjectCreatePage = () => {
         domainIds: []
     });
 
+    const [loading, setLoading] = useState(isEditMode);
+
     const [skillSearch, setSkillSearch] = useState('');
     const [skillResults, setSkillResults] = useState([]);
     const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
+
+    useEffect(() => {
+        if (isEditMode) {
+            fetchProjectForEdit();
+        }
+    }, [editProjectId]);
+
+    const fetchProjectForEdit = async () => {
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${editProjectId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            if (response.ok && result.data) {
+                const d = result.data;
+                setFormData({
+                    name: d.name,
+                    description: d.description,
+                    startedAt: d.startedAt,
+                    dueAt: d.dueAt,
+                    techSkillIds: d.techSkillIds || [],
+                    domainIds: d.domains || []
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching project for edit:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (skillSearch.trim()) {
@@ -88,8 +125,11 @@ const ProjectCreatePage = () => {
         };
 
         try {
-            const response = await fetch(`${API_BASE_URL}/projects`, {
-                method: 'POST',
+            const url = isEditMode ? `${API_BASE_URL}/projects/${editProjectId}` : `${API_BASE_URL}/projects`;
+            const method = isEditMode ? 'PATCH' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -99,16 +139,18 @@ const ProjectCreatePage = () => {
 
             const result = await response.json();
             if (response.ok) {
-                alert("프로젝트가 성공적으로 생성되었습니다!");
-                navigate('/main');
+                alert(isEditMode ? "프로젝트가 성공적으로 수정되었습니다!" : "프로젝트가 성공적으로 생성되었습니다!");
+                navigate(isEditMode ? `/projects/${editProjectId}` : '/main');
             } else {
-                alert(result.message || "프로젝트 생성에 실패했습니다.");
+                alert(result.message || "작업에 실패했습니다.");
             }
         } catch (error) {
             console.error("Error creating project:", error);
             alert("서버 오류가 발생했습니다.");
         }
     };
+
+    if (loading) return <div className="loading">로딩 중...</div>;
 
     const getSkillName = (id) => SKILLS.find(s => s.id === id)?.name || id;
 
@@ -117,7 +159,7 @@ const ProjectCreatePage = () => {
             <Navbar />
             <main className="project-create-content">
                 <header className="page-header">
-                    <h1 className="page-title">프로젝트 생성/수정</h1>
+                    <h1 className="page-title">프로젝트 {isEditMode ? '수정' : '생성'}</h1>
                 </header>
                 
                 <div className="create-card">
@@ -245,7 +287,7 @@ const ProjectCreatePage = () => {
                             </div>
                         </div>
 
-                        <button type="submit" className="huge-submit-button">생성하기</button>
+                        <button type="submit" className="huge-submit-button">{isEditMode ? '수정하기' : '생성하기'}</button>
                     </form>
                 </div>
             </main>
