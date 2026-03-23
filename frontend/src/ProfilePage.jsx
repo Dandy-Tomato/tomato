@@ -45,6 +45,7 @@ const ProfilePage = () => {
     useEffect(() => {
         const fetchCompanies = async () => {
             if (companySearch.trim()) {
+                setIsCompanyLoading(true);
                 try {
                     console.log("Profile Fetching companies for keyword:", companySearch);
                     const token = localStorage.getItem("accessToken");
@@ -63,15 +64,18 @@ const ProfilePage = () => {
                     }
                 } catch (error) {
                     console.error("Company search error (Profile):", error);
+                } finally {
+                    setIsCompanyLoading(false);
                 }
             } else {
                 setCompanyResults([]);
+                setIsCompanyLoading(false);
             }
         };
 
         const timer = setTimeout(fetchCompanies, 300);
         return () => clearTimeout(timer);
-    }, [companySearch, profile.companyIds]);
+    }, [companySearch, profile.companies]);
 
     const fetchProfile = async () => {
         const token = localStorage.getItem("accessToken");
@@ -108,12 +112,33 @@ const ProfilePage = () => {
 
                 console.log("Full data from Profile API:", data);
                 console.log("companyNames from API:", data.companyNames);
-                console.log("company_names from API:", data.company_names);
-                console.log("companyNameList from API:", data.companyNameList);
-
-                // Use the new names array if available, or fallback to IDs
-                const rawNames = data.companyNames || data.companyNameList || data.company_names;
+                
+                // 기업 정보 처리(ID와 이름의 매핑)
                 const rawIds = data.companyIds || data.company_ids || [];
+                const rawNames = data.companyNames || data.companyNameList || data.company_names;
+                const rawCompanies = data.companies || []; // 객체 배열 형태({id, name}) 대비
+                
+                let finalCompanies = [];
+                
+                if (rawCompanies.length > 0 && typeof rawCompanies[0] === 'object') {
+                    // 1. 객체 배열 형태인 경우 ([{id:1, name:'삼성'}, ...])
+                    finalCompanies = rawCompanies.map(c => ({
+                        id: Number(c.id) || 0,
+                        name: c.name || c.companyName || `기업 ${c.id}`
+                    }));
+                } else if (rawNames && Array.isArray(rawNames) && rawNames.length > 0) {
+                    // 2. 이름 배열이 있는 경우 (제공해주신 JSON 구조: companyNames: ["스위피", "스윙크"])
+                    finalCompanies = rawNames.map((name, index) => ({
+                        id: Number(rawIds[index]) || index, // ID가 없으면 리스트 인덱스라도 사용 (수정 시 필요)
+                        name: name
+                    }));
+                } else if (rawIds && Array.isArray(rawIds) && rawIds.length > 0) {
+                    // 3. ID 배열만 있는 경우 ([2014, 2015])
+                    finalCompanies = rawIds.map(id => ({
+                        id: Number(id),
+                        name: `기업 ${id}`
+                    }));
+                }
 
                 setProfile({
                     email: data.email || '',
@@ -121,10 +146,9 @@ const ProfilePage = () => {
                     githubUsername: data.githubUsername || '',
                     positionId: posId,
                     skillIds: (data.skillIds || []).map(id => Number(id)),
-                    companies: rawNames 
-                        ? rawNames.map((name, index) => ({ id: Number(rawIds[index]) || index, name }))
-                        : rawIds.map(id => ({ id: Number(id), name: `기업 ${id}` }))
+                    companies: finalCompanies
                 });
+                
                 if (data.nickname && data.nickname !== "null") {
                     localStorage.setItem('nickname', data.nickname);
                 }
@@ -172,7 +196,6 @@ const ProfilePage = () => {
                 setIsEditing(false);
                 fetchProfile(); // 최신 데이터 다시 불러오기
             } else {
-                // 에러 코드 3002(존재하지 않는 직무) 등의 상세 메시지 표시
                 const errorMsg = result.message || "수정에 실패했습니다.";
                 const errorCode = result.errorCode ? ` (에러 코드: ${result.errorCode})` : "";
                 alert(`${errorMsg}${errorCode}\n상태 코드: ${response.status}`);
@@ -186,10 +209,9 @@ const ProfilePage = () => {
 
     if (loading) return <div className="loading">로딩 중...</div>;
 
-    // ID를 이름으로 변환하는 도움 함수들
+    // 도움 함수들
     const getPositionName = (id) => POSITIONS.find(p => p.id === Number(id))?.name || id || '없음';
     const getSkillName = (id) => SKILLS.find(s => s.id === Number(id))?.name || id;
-    const getCompanyName = (id) => id; // Backend currently only returns ID
 
     const addSkill = (skill) => {
         if (!profile.skillIds.includes(skill.id)) {
@@ -308,14 +330,14 @@ const ProfilePage = () => {
                                         {skillResults.length > 0 && (
                                             <ul role="listbox" style={{
                                                 position: 'absolute',
-                                                top: '100%', // 입력창 바로 아래
+                                                top: '100%',
                                                 left: 0,
                                                 right: 0,
                                                 backgroundColor: '#ffffff',
-                                                border: '2px solid #ff6b6b', // 확실히 보이게 경계 강화
+                                                border: '2px solid #ff6b6b',
                                                 borderRadius: '8px',
                                                 boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-                                                zIndex: 99999, // 최상단 노출
+                                                zIndex: 99999,
                                                 maxHeight: '250px',
                                                 overflowY: 'auto',
                                                 padding: '0',
@@ -328,7 +350,6 @@ const ProfilePage = () => {
                                                         role="option"
                                                         onMouseDown={(e) => {
                                                             e.preventDefault();
-                                                            console.log("Skill selected:", s);
                                                             addSkill(s);
                                                         }}
                                                         style={{
