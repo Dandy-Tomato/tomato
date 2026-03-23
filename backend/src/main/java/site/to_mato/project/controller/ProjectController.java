@@ -9,6 +9,7 @@ import site.to_mato.project.dto.request.CreateProjectRequest;
 import site.to_mato.project.dto.request.JoinProjectRequest;
 import site.to_mato.project.dto.request.UpdateProjectRequest;
 import site.to_mato.project.dto.response.ProjectIdResponse;
+import site.to_mato.project.dto.response.ProjectInviteCodeResponse;
 import site.to_mato.project.service.ProjectService;
 
 @RestController
@@ -44,6 +45,15 @@ public class ProjectController {
             @AuthenticationPrincipal Long userId
     ) {
         ProjectIdResponse response = projectService.deleteProject(userId, projectId);
+        return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/{projectId}/invite-code")
+    public ApiResponse<ProjectInviteCodeResponse> getProjectInviteCode(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long projectId
+    ) {
+        ProjectInviteCodeResponse response = projectService.getProjectInviteCode(userId, projectId);
         return ApiResponse.ok(response);
     }
 

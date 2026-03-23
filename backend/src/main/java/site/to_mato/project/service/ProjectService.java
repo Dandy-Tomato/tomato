@@ -13,6 +13,7 @@ import site.to_mato.project.dto.request.CreateProjectRequest;
 import site.to_mato.project.dto.request.JoinProjectRequest;
 import site.to_mato.project.dto.request.UpdateProjectRequest;
 import site.to_mato.project.dto.response.ProjectIdResponse;
+import site.to_mato.project.dto.response.ProjectInviteCodeResponse;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectMember;
 import site.to_mato.project.repository.ProjectMemberRepository;
@@ -106,6 +107,15 @@ public class ProjectService {
         project.softDelete();
 
         return ProjectIdResponse.of(project.getId());
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectInviteCodeResponse getProjectInviteCode(Long userId, Long projectId) {
+        getUser(userId);
+        Project project = getProject(projectId);
+        getProjectMember(projectId, userId);
+
+        return ProjectInviteCodeResponse.of(project.getId(), project.getInviteCode());
     }
 
     @Transactional
