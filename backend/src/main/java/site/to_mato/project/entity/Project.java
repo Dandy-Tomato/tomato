@@ -52,7 +52,6 @@ public class Project extends SoftDeleteEntity {
 
     @Column(name = "preference_embedding", columnDefinition = "vector(1536)")
     @JdbcTypeCode(SqlTypes.VECTOR)
-    @Transient
     private float[] preferenceEmbedding;
 
     @ManyToOne(fetch = FetchType.LAZY)

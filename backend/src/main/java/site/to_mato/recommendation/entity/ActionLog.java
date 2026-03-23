@@ -36,7 +36,6 @@ public class ActionLog {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Lob
     @Column(name = "meta")
     private String meta;
 
