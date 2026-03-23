@@ -1,3 +1,155 @@
+import groovy.json.JsonOutput
+
+/*
+ * =========================
+ * Mattermost 알림용 헬퍼 함수
+ * =========================
+ */
+
+def buildGitCommitUrl(String gitUrl, String commitSha) {
+    if (!gitUrl?.trim() || !commitSha?.trim()) {
+        return ''
+    }
+
+    def base = gitUrl.trim().replaceAll(/\.git$/, '')
+    return "${base}/-/commit/${commitSha}"
+}
+
+def detectBranch() {
+    if (env.BRANCH_NAME?.trim()) {
+        return env.BRANCH_NAME.trim()
+    }
+
+    if (env.GIT_LOCAL_BRANCH?.trim()) {
+        return env.GIT_LOCAL_BRANCH.trim()
+    }
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
+    }
+
+    if (fileExists('.git')) {
+        def symbolic = sh(
+            script: "git symbolic-ref --short -q HEAD || true",
+            returnStdout: true
+        ).trim()
+
+        if (symbolic) {
+            return symbolic
+        }
+
+        def remoteBranch = sh(
+            script: "git branch -r --contains HEAD | sed 's/^ *//' | head -n 1 || true",
+            returnStdout: true
+        ).trim()
+
+        if (remoteBranch) {
+            return remoteBranch.replaceFirst(/^origin\//, '')
+        }
+    }
+
+    return 'unknown'
+}
+
+def resolveBranch() {
+    def cached = env.PIPELINE_BRANCH?.trim()
+    if (cached && cached != 'HEAD') return cached
+
+    return detectBranch()
+}
+
+def resolvePusherMention() {
+    def cached = env.PIPELINE_MENTION?.trim()
+    if (cached) return cached
+
+    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+    if (pusher) {
+        return "@${pusher}"
+    }
+
+    try {
+        if (fileExists('.git')) {
+            return sh(
+                script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                returnStdout: true
+            ).trim()
+        }
+    } catch (Exception e) {
+        echo "작성자 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'Unknown'
+}
+
+def markStage(String stageName) {
+    env.LAST_STAGE = stageName
+    echo "[STAGE] LAST_STAGE = ${env.LAST_STAGE}"
+}
+
+def sendMMNotify(boolean success, Map info) {
+    def titleLine = success
+        ? "## :jenkins1: AI CI/CD 성공 :happy_cat:"
+        : "## :jenkins5: AI CI/CD 실패 :omgham:"
+
+    def lines = []
+
+    if (info.mention) {
+        lines << "**작성자**: ${info.mention}"
+    }
+
+    if (info.branch) {
+        lines << "**브랜치**: `${info.branch}`"
+    }
+
+    if (info.image) {
+        lines << "**이미지**: `${info.image}`"
+    }
+
+    if (info.server) {
+        lines << "**배포 서버**: `${info.server}`"
+    }
+
+    if (info.stage) {
+        lines << "**실패/현재 단계**: `${info.stage}`"
+    }
+
+    if (info.commit?.msg) {
+        def commitLine = info.commit?.url
+            ? "[${info.commit.msg}](${info.commit.url})"
+            : info.commit.msg
+        lines << "**커밋**: ${commitLine}"
+    }
+
+    if (info.buildUrl) {
+        lines << "**빌드 상세**: [Details](${info.buildUrl})"
+    }
+
+    if (info.details) {
+        lines << "**비고**: ${info.details}"
+    }
+
+    def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
+
+    writeFile(
+        file: 'payload.json',
+        text: JsonOutput.toJson([
+            text      : text,
+            username  : "Jenkins",
+            icon_emoji: ":rocket:"
+        ])
+    )
+
+    withCredentials([string(credentialsId: 'mattermost-webhook', variable: 'MM_WEBHOOK')]) {
+        sh '''
+            set -eux
+            curl -sS -f -X POST \
+              -H 'Content-Type: application/json' \
+              --data-binary @payload.json \
+              "$MM_WEBHOOK"
+        '''
+    }
+}
+
 pipeline {
     agent any
 
@@ -22,6 +174,9 @@ pipeline {
     stages {
         stage('Check Build Environment') {
             steps {
+                script {
+                    markStage('Check Build Environment')
+                }
                 sh '''
                     set -eux
                     whoami
@@ -37,7 +192,12 @@ pipeline {
 
         stage('Checkout') {
             steps {
+                script {
+                    markStage('Checkout')
+                }
+
                 deleteDir()
+
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: env.CHECKOUT_BRANCH]],
@@ -46,11 +206,46 @@ pipeline {
                         credentialsId: 'gitlab-http-creds'
                     ]]
                 ])
+
+                script {
+                    env.PIPELINE_BRANCH = detectBranch()
+
+                    env.PIPELINE_COMMIT_SHA = sh(
+                        script: "git rev-parse HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    env.PIPELINE_COMMIT_MSG = sh(
+                        script: "git log -1 --pretty=%s",
+                        returnStdout: true
+                    ).trim()
+
+                    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+                    if (pusher) {
+                        env.PIPELINE_MENTION = "@${pusher}"
+                    } else {
+                        env.PIPELINE_MENTION = sh(
+                            script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    env.PIPELINE_COMMIT_URL = buildGitCommitUrl(env.GIT_URL, env.PIPELINE_COMMIT_SHA)
+
+                    echo "Collected metadata:"
+                    echo "- branch: ${env.PIPELINE_BRANCH}"
+                    echo "- commit: ${env.PIPELINE_COMMIT_SHA}"
+                    echo "- mention: ${env.PIPELINE_MENTION}"
+                }
             }
         }
 
         stage('Validate AI Files') {
             steps {
+                script {
+                    markStage('Validate AI Files')
+                }
+
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
@@ -73,6 +268,10 @@ pipeline {
 
         stage('Build AI Image') {
             steps {
+                script {
+                    markStage('Build AI Image')
+                }
+
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
@@ -88,6 +287,10 @@ pipeline {
 
         stage('Push AI Image') {
             steps {
+                script {
+                    markStage('Push AI Image')
+                }
+
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKERHUB_USERNAME',
@@ -109,11 +312,20 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
+                script {
+                    markStage('Deploy to EC2')
+                }
+
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh("""
                         set -eux
 
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
+if [ ! -d ${DEPLOY_DIR} ]; then
+  echo "[ERROR] Deploy directory not found: ${DEPLOY_DIR}"
+  exit 1
+fi
+
 cd ${DEPLOY_DIR}
 
 if [ ! -f .env ]; then
@@ -165,6 +377,10 @@ REMOTE_SCRIPT
 
         stage('Verify Deployment') {
             steps {
+                script {
+                    markStage('Verify Deployment')
+                }
+
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh("""
                         set -eux
@@ -195,11 +411,44 @@ REMOTE_SCRIPT
 
     post {
         success {
-            echo 'AI image build and deployment succeeded.'
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.AI_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE?.trim() ?: 'START',
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ]
+                ]
+
+                echo 'AI image build and deployment succeeded.'
+                sendMMNotify(true, buildInfo)
+            }
         }
 
         failure {
-            echo 'AI image build or deployment failed.'
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.AI_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE?.trim() ?: 'START',
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ],
+                    details : "빌드 상세 링크에서 실패 원인을 확인하세요."
+                ]
+
+                echo 'AI image build or deployment failed.'
+                sendMMNotify(false, buildInfo)
+            }
         }
 
         always {
