@@ -29,8 +29,9 @@
 }
 
 .banner-image {
-    width: 120px;
-    margin-bottom: 20px;
+    width: 240px; /* 120px에서 240px로 확대 */
+    height: auto;
+    margin-bottom: 25px;
 }
 
 .banner-subtitle {
