@@ -34,7 +34,7 @@ public class ProjectTopicReactionService {
 
         ProjectTopicReaction reactionEntity =
                 reactionRepository
-                        .findByProjectIdAndTopicId(projectId, topicId)
+                        .findByProject_IdAndTopic_Id(projectId, topicId)
                         .orElse(null);
 
         try {

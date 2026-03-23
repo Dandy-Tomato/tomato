@@ -8,10 +8,7 @@ import java.util.Optional;
 
 public interface ProjectSkillRepository extends JpaRepository<ProjectSkill, Long> {
 
-    List<ProjectSkill> findAllByProjectIdAndProjectDeletedAtIsNull(Long projectId);
+    List<ProjectSkill> findAllByProject_Id(Long projectId);
 
-    Optional<ProjectSkill> findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(
-            Long projectId,
-            Long skillId
-    );
+    Optional<ProjectSkill> findByProject_IdAndSkill_Id(Long projectId, Long skillId);
 }

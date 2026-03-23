@@ -39,7 +39,7 @@ public class ProjectQueryService {
         PageRequest pageRequest = PageRequest.of(page, size);
 
         Page<ProjectMember> projectMembers =
-                projectMemberRepository.findAllByUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
+                projectMemberRepository.findAllByUser_Id(
                         userId,
                         pageRequest
                 );
@@ -126,17 +126,17 @@ public class ProjectQueryService {
     }
 
     private void validateUserExists(Long userId) {
-        userRepository.findByIdAndDeletedAtIsNull(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     private Project getProject(Long projectId) {
-        return projectRepository.findByIdAndDeletedAtIsNull(projectId)
+        return projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
     }
 
     private void validateProjectMember(Long projectId, Long userId) {
-        projectMemberRepository.findByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
+        projectMemberRepository.findByProject_IdAndUser_Id(
                 projectId,
                 userId
         ).orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_MEMBER_NOT_FOUND));

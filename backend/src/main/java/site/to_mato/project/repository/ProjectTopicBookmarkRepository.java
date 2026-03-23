@@ -7,6 +7,5 @@ import java.util.Optional;
 
 public interface ProjectTopicBookmarkRepository extends JpaRepository<ProjectTopicBookmark, Long> {
 
-    Optional<ProjectTopicBookmark> findByProjectIdAndTopicIdAndDeletedAtIsNull(Long projectId, Long topicId);
-
+    Optional<ProjectTopicBookmark> findByProject_IdAndTopic_Id(Long projectId, Long topicId);
 }

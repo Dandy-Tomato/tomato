@@ -63,7 +63,7 @@ public class ProjectProfileService {
     }
 
     private void addUserSkills(Project project, Long userId) {
-        List<UserSkill> userSkills = userSkillRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId);
+        List<UserSkill> userSkills = userSkillRepository.findAllByUser_Id(userId);
 
         for (UserSkill userSkill : userSkills) {
             Skill skill = userSkill.getSkill();
@@ -75,7 +75,7 @@ public class ProjectProfileService {
     }
 
     private void removeUserSkills(Project project, Long userId) {
-        List<UserSkill> userSkills = userSkillRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId);
+        List<UserSkill> userSkills = userSkillRepository.findAllByUser_Id(userId);
 
         for (UserSkill userSkill : userSkills) {
             Skill skill = userSkill.getSkill();
@@ -88,7 +88,7 @@ public class ProjectProfileService {
 
     private void addUserDomains(Project project, Long userId) {
         List<UserDesiredCompany> userDesiredCompanies =
-                userDesiredCompanyRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId);
+                userDesiredCompanyRepository.findAllByUser_Id(userId);
 
         List<Domain> domains = userDesiredCompanies.stream()
                 .map(UserDesiredCompany::getCompany)
@@ -105,7 +105,7 @@ public class ProjectProfileService {
 
     private void removeUserDomains(Project project, Long userId) {
         List<UserDesiredCompany> userDesiredCompanies =
-                userDesiredCompanyRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId);
+                userDesiredCompanyRepository.findAllByUser_Id(userId);
 
         List<Domain> domains = userDesiredCompanies.stream()
                 .map(UserDesiredCompany::getCompany)
@@ -122,7 +122,7 @@ public class ProjectProfileService {
 
     private void replaceSelectedSkills(Project project, List<Skill> selectedSkills) {
         List<ProjectSkill> projectSkills =
-                projectSkillRepository.findAllByProjectIdAndProjectDeletedAtIsNull(project.getId());
+                projectSkillRepository.findAllByProject_Id(project.getId());
 
         for (ProjectSkill projectSkill : projectSkills) {
             removeSelectedSkill(projectSkill);
@@ -135,7 +135,7 @@ public class ProjectProfileService {
 
     private void replaceSelectedDomains(Project project, List<Domain> selectedDomains) {
         List<ProjectDomain> projectDomains =
-                projectDomainRepository.findAllByProjectIdAndProjectDeletedAtIsNull(project.getId());
+                projectDomainRepository.findAllByProject_Id(project.getId());
 
         for (ProjectDomain projectDomain : projectDomains) {
             removeSelectedDomain(projectDomain);
@@ -148,7 +148,7 @@ public class ProjectProfileService {
 
     private void addMemberSkill(Project project, Skill skill) {
         Optional<ProjectSkill> optional =
-                projectSkillRepository.findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(project.getId(), skill.getId());
+                projectSkillRepository.findByProject_IdAndSkill_Id(project.getId(), skill.getId());
 
         if (optional.isPresent()) {
             optional.get().increaseWeight(MEMBER_WEIGHT);
@@ -159,7 +159,7 @@ public class ProjectProfileService {
     }
 
     private void removeMemberSkill(Project project, Long skillId) {
-        projectSkillRepository.findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(project.getId(), skillId)
+        projectSkillRepository.findByProject_IdAndSkill_Id(project.getId(), skillId)
                 .ifPresent(projectSkill -> {
                     projectSkill.decreaseWeight(MEMBER_WEIGHT);
 
@@ -171,7 +171,7 @@ public class ProjectProfileService {
 
     private void addSelectedSkill(Project project, Skill skill) {
         Optional<ProjectSkill> optional =
-                projectSkillRepository.findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(project.getId(), skill.getId());
+                projectSkillRepository.findByProject_IdAndSkill_Id(project.getId(), skill.getId());
 
         if (optional.isPresent()) {
             optional.get().increaseWeight(SELECTED_WEIGHT);
@@ -191,7 +191,7 @@ public class ProjectProfileService {
 
     private void addMemberDomain(Project project, Domain domain) {
         Optional<ProjectDomain> optional =
-                projectDomainRepository.findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(project.getId(), domain.getId());
+                projectDomainRepository.findByProject_IdAndDomain_Id(project.getId(), domain.getId());
 
         if (optional.isPresent()) {
             optional.get().increaseWeight(MEMBER_WEIGHT);
@@ -202,7 +202,7 @@ public class ProjectProfileService {
     }
 
     private void removeMemberDomain(Project project, Long domainId) {
-        projectDomainRepository.findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(project.getId(), domainId)
+        projectDomainRepository.findByProject_IdAndDomain_Id(project.getId(), domainId)
                 .ifPresent(projectDomain -> {
                     projectDomain.decreaseWeight(MEMBER_WEIGHT);
 
@@ -214,7 +214,7 @@ public class ProjectProfileService {
 
     private void addSelectedDomain(Project project, Domain domain) {
         Optional<ProjectDomain> optional =
-                projectDomainRepository.findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(project.getId(), domain.getId());
+                projectDomainRepository.findByProject_IdAndDomain_Id(project.getId(), domain.getId());
 
         if (optional.isPresent()) {
             optional.get().increaseWeight(SELECTED_WEIGHT);

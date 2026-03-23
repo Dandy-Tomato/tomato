@@ -33,18 +33,18 @@ public class UserService {
     }
 
     private User getUser(Long userId) {
-        return userRepository.findByIdAndDeletedAtIsNull(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     private UserProfileResponse buildUserProfileResponse(User user, boolean includeEmail) {
         Long userId = user.getId();
 
-        List<Long> skillIds = userSkillRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId).stream()
+        List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()
                 .map(userSkill -> userSkill.getSkill().getId())
                 .toList();
 
-        List<String> companyNames = userDesiredCompanyRepository.findAllByUser_IdAndUser_DeletedAtIsNull(userId).stream()
+        List<String> companyNames = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
                 .map(userCompany -> userCompany.getCompany().getName())
                 .toList();
 

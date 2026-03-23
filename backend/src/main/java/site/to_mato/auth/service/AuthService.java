@@ -59,7 +59,7 @@ public class AuthService {
 
     @Transactional
     public void updateProfile(Long userId, OnboardingRequest req) {
-        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Position position = null;
@@ -90,7 +90,7 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest req) {
-        User user = userRepository.findByEmailAndDeletedAtIsNull(req.email())
+        User user = userRepository.findByEmail(req.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS));
 
         if (user.getPassword() == null) {
@@ -124,7 +124,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_REVOKED);
         }
 
-        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         String role = user.getRole().name();
@@ -144,7 +144,7 @@ public class AuthService {
 
     @Transactional
     public void signout(Long userId, String refreshToken) {
-        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (refreshToken != null && !refreshToken.isBlank()) {

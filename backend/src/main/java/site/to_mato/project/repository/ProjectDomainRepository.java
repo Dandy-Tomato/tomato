@@ -14,10 +14,7 @@ public interface ProjectDomainRepository extends JpaRepository<ProjectDomain, Lo
     @Query("SELECT pd FROM ProjectDomain pd JOIN FETCH pd.domain WHERE pd.project.id = :projectId")
     List<ProjectDomain> findByProjectId(@Param("projectId") Long projectId);
 
-    List<ProjectDomain> findAllByProjectIdAndProjectDeletedAtIsNull(Long projectId);
+    List<ProjectDomain> findAllByProject_Id(Long projectId);
 
-    Optional<ProjectDomain> findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(
-            Long projectId,
-            Long domainId
-    );
+    Optional<ProjectDomain> findByProject_IdAndDomain_Id(Long projectId, Long domainId);
 }

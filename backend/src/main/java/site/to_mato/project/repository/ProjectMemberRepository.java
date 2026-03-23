@@ -12,21 +12,12 @@ import java.util.Optional;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Long> {
 
-    boolean existsByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
-            Long projectId,
-            Long userId
-    );
+    boolean existsByProject_IdAndUser_Id(Long projectId, Long userId);
 
-    Optional<ProjectMember> findByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
-            Long projectId,
-            Long userId
-    );
+    Optional<ProjectMember> findByProject_IdAndUser_Id(Long projectId, Long userId);
 
     @EntityGraph(attributePaths = "project")
-    Page<ProjectMember> findAllByUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
-            Long userId,
-            Pageable pageable
-    );
+    Page<ProjectMember> findAllByUser_Id(Long userId, Pageable pageable);
 
     @Query("""
                 SELECT pm.project.id, COUNT(pm)

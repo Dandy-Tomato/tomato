@@ -6,6 +6,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 import site.to_mato.common.entity.SoftDeleteEntity;
 import site.to_mato.user.entity.User;
@@ -17,6 +19,8 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "projects")
+@SQLRestriction("deleted_at IS NULL")
+@SQLDelete(sql = "UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE project_id = ?")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Project extends SoftDeleteEntity {
 

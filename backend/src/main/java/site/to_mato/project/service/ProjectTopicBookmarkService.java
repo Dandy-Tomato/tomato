@@ -25,7 +25,7 @@ public class ProjectTopicBookmarkService {
     public boolean toggleBookmark(Long actorUserId, Long projectId, Long topicId) {
 
         ProjectTopicBookmark bookmark = bookmarkRepository
-                .findByProjectIdAndTopicIdAndDeletedAtIsNull(projectId, topicId)
+                .findByProject_IdAndTopic_Id(projectId, topicId)
                 .orElse(null);
 
         if (bookmark != null) {

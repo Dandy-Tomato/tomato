@@ -46,7 +46,7 @@ public class ProjectService {
             throw new BusinessException(ErrorCode.INVALID_PROJECT_DATE_RANGE);
         }
 
-        User owner = userRepository.findByIdAndDeletedAtIsNull(userId)
+        User owner = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         List<Skill> selectedSkills = getSelectedSkills(request.techSkillIds());
         List<Domain> selectedDomains = getSelectedDomains(request.domainIds());
@@ -121,10 +121,10 @@ public class ProjectService {
     @Transactional
     public ProjectIdResponse joinProject(Long userId, JoinProjectRequest request) {
         User user = getUser(userId);
-        Project project = projectRepository.findByInviteCodeAndDeletedAtIsNull(request.inviteCode())
+        Project project = projectRepository.findByInviteCode(request.inviteCode())
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_PROJECT_INVITE_CODE));
 
-        boolean alreadyJoined = projectMemberRepository.existsByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
+        boolean alreadyJoined = projectMemberRepository.existsByProject_IdAndUser_Id(
                 project.getId(),
                 userId
         );
@@ -157,17 +157,17 @@ public class ProjectService {
     }
 
     private User getUser(Long userId) {
-        return userRepository.findByIdAndDeletedAtIsNull(userId)
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
     private Project getProject(Long projectId) {
-        return projectRepository.findByIdAndDeletedAtIsNull(projectId)
+        return projectRepository.findById(projectId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
     }
 
     private ProjectMember getProjectMember(Long projectId, Long userId) {
-        return projectMemberRepository.findByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
+        return projectMemberRepository.findByProject_IdAndUser_Id(
                 projectId,
                 userId
         ).orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_MEMBER_NOT_FOUND));
@@ -222,7 +222,7 @@ public class ProjectService {
                 sb.append(chars.charAt(random.nextInt(chars.length())));
             }
             code = sb.toString();
-        } while (projectRepository.existsByInviteCodeAndDeletedAtIsNull(code));
+        } while (projectRepository.existsByInviteCode(code));
 
         return code;
     }
