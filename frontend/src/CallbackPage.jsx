@@ -35,8 +35,13 @@ const CallbackPage = () => {
                 })
                     .then(res => res.json())
                     .then(result => {
-                        if (result.data && result.data.nickname && result.data.nickname !== "null") {
-                            localStorage.setItem("nickname", result.data.nickname);
+                        if (result.data) {
+                            if (result.data.nickname && result.data.nickname !== "null") {
+                                localStorage.setItem("nickname", result.data.nickname);
+                            }
+                            if (result.data.user_id || result.data.userId) {
+                                localStorage.setItem("userId", result.data.user_id || result.data.userId);
+                            }
                         }
                         navigate("/main");
                     })

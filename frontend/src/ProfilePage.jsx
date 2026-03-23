@@ -152,6 +152,9 @@ const ProfilePage = () => {
                 if (data.nickname && data.nickname !== "null") {
                     localStorage.setItem('nickname', data.nickname);
                 }
+                if (data.user_id || data.userId) {
+                    localStorage.setItem('userId', data.user_id || data.userId);
+                }
             } else {
                 console.error("Failed to fetch profile:", result.message);
             }

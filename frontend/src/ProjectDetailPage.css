@@ -1,0 +1,238 @@
+.project-detail-page {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+}
+
+.project-detail-content {
+    flex: 1;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.detail-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+}
+
+.header-info h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.status-badges {
+    display: flex;
+    gap: 8px;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.badge.owner { background: #fff5f5; color: #ff6b6b; border: 1px solid #ffc9c9; }
+.badge.date { background: #f1f3f5; color: #495057; }
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.icon-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.icon-button:hover {
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+    background-color: #fff5f5;
+}
+
+.icon-button.delete:hover {
+    border-color: #fa5252;
+    color: #fa5252;
+    background-color: #fff5f5;
+}
+
+/* Content Sections */
+.section-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #444;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.description-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #555;
+    white-space: pre-wrap;
+    background: #fdfdfd;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #f1f1f1;
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.meta-item {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.meta-label {
+    font-size: 12px;
+    color: #888;
+    font-weight: 600;
+}
+
+.meta-value {
+    font-size: 15px;
+    color: #333;
+    font-weight: 700;
+}
+
+.invite-code-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.copy-button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+/* Members Grid */
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+}
+
+.member-card {
+    background: #ffffff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.member-avatar {
+    width: 44px;
+    height: 44px;
+    background: #fff5f5;
+    color: #ff6b6b;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.member-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.member-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+}
+
+.member-role {
+    font-size: 12px;
+    color: #ff6b6b;
+    font-weight: 600;
+}
+
+.member-position {
+    font-size: 12px;
+    color: #999;
+}
+
+/* Edit Form Overlay */
+.edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.save-button {
+    background-color: #ff6b6b;
+    color: white;
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.cancel-button {
+    background-color: white;
+    color: #666;
+    padding: 10px 24px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}

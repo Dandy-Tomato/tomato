@@ -46,9 +46,10 @@ const LoginPage = () => {
             const result = await response.json();
 
             if (response.ok && result.data) {
-                // 로그인 성공: 토큰 저장 및 이동
+                // 로그인 성공: 토큰 및 사용자 ID 저장
                 localStorage.setItem("accessToken", result.data.accessToken);
                 localStorage.setItem("refreshToken", result.data.refreshToken);
+                localStorage.setItem("userId", result.data.userId); // userId 저장 추가
                 alert('로그인에 성공했습니다!');
                 navigate('/main');
             } else {

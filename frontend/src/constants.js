@@ -131,4 +131,18 @@ export const SKILLS = [
     { id: 118, name: 'Arduino' },
 ];
 
+export const DOMAINS = [
+    { id: 10001, name: '서비스', dbName: 'service' },
+    { id: 10002, name: '금융·은행', dbName: 'finance' },
+    { id: 10003, name: 'IT·정보통신', dbName: 'it' },
+    { id: 10004, name: '판매·유통', dbName: 'retail' },
+    { id: 10005, name: '제조·생산·화학', dbName: 'manufacturing' },
+    { id: 10006, name: '건설', dbName: 'construction' },
+    { id: 10007, name: '의료·제약', dbName: 'healthcare' },
+    { id: 10008, name: '교육', dbName: 'education' },
+    { id: 10009, name: '미디어·광고', dbName: 'media' },
+    { id: 10010, name: '문화·예술·디자인', dbName: 'culture' },
+    { id: 10011, name: '기관·협회', dbName: 'institution' },
+];
+
 
