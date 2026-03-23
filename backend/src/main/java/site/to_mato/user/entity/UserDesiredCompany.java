@@ -34,7 +34,7 @@ public class UserDesiredCompany {
     @JoinColumn(name = "company_id")
     private Company company;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private UserDesiredCompany(User user, Company company) {
         this.user = user;
         this.company = company;

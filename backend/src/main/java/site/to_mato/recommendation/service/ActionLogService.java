@@ -27,12 +27,13 @@ public class ActionLogService {
             ActionType actionType
     ) {
 
-        ActionLog actionLog = ActionLog.builder()
-                .actorUserId(actorUserId)
-                .projectId(projectId)
-                .topicId(topicId)
-                .actionType(actionType)
-                .build();
+        ActionLog actionLog = ActionLog.of(
+                actorUserId,
+                projectId,
+                topicId,
+                actionType,
+                null
+                );
 
         ActionLog savedActionLog = actionLogRepository.save(actionLog);
 
