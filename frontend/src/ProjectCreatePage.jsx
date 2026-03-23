@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import './ProjectCreatePage.css';
 import { SKILLS, DOMAINS } from './constants';
+import { MdFolder, MdEdit, MdHandyman, MdShoppingBag, MdCalendarMonth, MdExpandMore } from 'react-icons/md';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -19,6 +20,7 @@ const ProjectCreatePage = () => {
 
     const [skillSearch, setSkillSearch] = useState('');
     const [skillResults, setSkillResults] = useState([]);
+    const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
 
     useEffect(() => {
         if (skillSearch.trim()) {
@@ -26,7 +28,7 @@ const ProjectCreatePage = () => {
                 s.name.toLowerCase().includes(skillSearch.toLowerCase()) &&
                 !formData.techSkillIds.includes(s.id)
             );
-            setSkillResults(filtered.slice(0, 10));
+            setSkillResults(filtered.slice(0, 5));
         } else {
             setSkillResults([]);
         }
@@ -43,6 +45,7 @@ const ProjectCreatePage = () => {
             techSkillIds: [...prev.techSkillIds, skill.id]
         }));
         setSkillSearch('');
+        setIsSkillDropdownOpen(false);
     };
 
     const removeSkill = (skillId) => {
@@ -113,96 +116,97 @@ const ProjectCreatePage = () => {
         <div className="project-create-page">
             <Navbar />
             <main className="project-create-content">
+                <header className="page-header">
+                    <h1 className="page-title">프로젝트 생성/수정</h1>
+                </header>
+                
                 <div className="create-card">
-                    <h1 className="create-title">새 프로젝트 생성</h1>
-                    <p className="create-subtitle">함께 프로젝트를 이끌어갈 팀원을 찾아보세요.</p>
-
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label className="form-label">프로젝트명<span className="required-star">*</span></label>
+                    <form onSubmit={handleSubmit} className="project-form">
+                        
+                        {/* 프로젝트명 */}
+                        <div className="form-section">
+                            <div className="section-label">
+                                <MdFolder className="section-icon" /> 프로젝트명
+                            </div>
                             <input 
                                 type="text" 
                                 name="name"
                                 className="form-input" 
-                                placeholder="프로젝트 이름을 입력하세요."
+                                placeholder="프로젝트명을 입력하세요."
                                 value={formData.name}
                                 onChange={handleInputChange}
                                 required
                             />
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label">프로젝트 설명<span className="required-star">*</span></label>
+                        {/* 프로젝트 설명 */}
+                        <div className="form-section">
+                            <div className="section-label">
+                                <MdEdit className="section-icon" /> 프로젝트 설명
+                            </div>
                             <textarea 
                                 name="description"
                                 className="form-textarea" 
-                                placeholder="프로젝트에 대해 설명해 주세요. (목표, 진행 방식 등)"
+                                placeholder="프로젝트에 대한 설명을 입력하세요."
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 required
                             ></textarea>
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label">진행 기간<span className="required-star">*</span></label>
-                            <div className="date-range">
-                                <input 
-                                    type="date" 
-                                    name="startedAt"
-                                    className="form-input" 
-                                    value={formData.startedAt}
-                                    onChange={handleInputChange}
-                                    required
-                                />
-                                <span className="date-separator">~</span>
-                                <input 
-                                    type="date" 
-                                    name="dueAt"
-                                    className="form-input" 
-                                    value={formData.dueAt}
-                                    onChange={handleInputChange}
-                                    required
-                                />
+                        {/* 희망 기술 스택 */}
+                        <div className="form-section">
+                            <div className="section-label">
+                                <MdHandyman className="section-icon" /> 희망 기술 스택
                             </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">희망 기술 스택</label>
                             <div className="selected-tags">
                                 {formData.techSkillIds.map(id => (
-                                    <span key={id} className="tag">
+                                    <span key={id} className="tech-tag">
                                         {getSkillName(id)}
                                         <span className="tag-remove" onClick={() => removeSkill(id)}>✕</span>
                                     </span>
                                 ))}
                             </div>
-                            <div className="search-wrapper">
-                                <input 
-                                    type="text" 
-                                    className="form-input" 
-                                    placeholder="기술 스택 검색 (예: Java, React)"
-                                    value={skillSearch}
-                                    onChange={(e) => setSkillSearch(e.target.value)}
-                                />
-                                {skillResults.length > 0 && (
-                                    <ul className="search-results">
-                                        {skillResults.map(s => (
-                                            <li key={s.id} className="result-item" onClick={() => addSkill(s)}>
-                                                {s.name}
-                                            </li>
-                                        ))}
-                                    </ul>
+                            <div className="dropdown-container">
+                                <div className="custom-dropdown" onClick={() => setIsSkillDropdownOpen(!isSkillDropdownOpen)}>
+                                    <span>{skillSearch || "기술 스택"}</span>
+                                    <MdExpandMore className={`arrow-icon ${isSkillDropdownOpen ? 'open' : ''}`} />
+                                </div>
+                                {isSkillDropdownOpen && (
+                                    <div className="dropdown-menu">
+                                        <input 
+                                            type="text" 
+                                            className="dropdown-search"
+                                            placeholder="검색..."
+                                            value={skillSearch}
+                                            onChange={(e) => setSkillSearch(e.target.value)}
+                                            autoFocus
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                        <ul className="dropdown-list">
+                                            {skillResults.length > 0 ? (
+                                                skillResults.map(s => (
+                                                    <li key={s.id} onClick={() => addSkill(s)}>{s.name}</li>
+                                                ))
+                                            ) : (
+                                                <li className="no-result">결과 없음</li>
+                                            )}
+                                        </ul>
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label className="form-label">산업 도메인<span className="required-star">*</span></label>
-                            <div className="domain-grid">
+                        {/* 희망 도메인 */}
+                        <div className="form-section">
+                            <div className="section-label">
+                                <MdShoppingBag className="section-icon" /> 희망 도메인
+                            </div>
+                            <div className="domain-tags-container">
                                 {DOMAINS.map(domain => (
                                     <div 
                                         key={domain.id} 
-                                        className={`domain-item ${formData.domainIds.includes(domain.id) ? 'active' : ''}`}
+                                        className={`domain-tag ${formData.domainIds.includes(domain.id) ? 'active' : ''}`}
                                         onClick={() => toggleDomain(domain.id)}
                                     >
                                         {domain.name}
@@ -211,10 +215,37 @@ const ProjectCreatePage = () => {
                             </div>
                         </div>
 
-                        <div className="create-actions">
-                            <button type="button" className="cancel-button" onClick={() => navigate(-1)}>취소</button>
-                            <button type="submit" className="submit-button">프로젝트 생성하기</button>
+                        {/* 프로젝트 기간 */}
+                        <div className="form-section">
+                            <div className="section-label">
+                                <MdCalendarMonth className="section-icon" /> 프로젝트 기간
+                            </div>
+                            <div className="date-picker-row">
+                                <div className="date-input-wrapper">
+                                    <input 
+                                        type="date" 
+                                        name="startedAt"
+                                        className="custom-date-picker" 
+                                        value={formData.startedAt}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <span className="date-sep">~</span>
+                                <div className="date-input-wrapper">
+                                    <input 
+                                        type="date" 
+                                        name="dueAt"
+                                        className="custom-date-picker" 
+                                        value={formData.dueAt}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                            </div>
                         </div>
+
+                        <button type="submit" className="huge-submit-button">생성하기</button>
                     </form>
                 </div>
             </main>
