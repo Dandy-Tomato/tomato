@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import './MainPage.css';
 import tomatoCharacter from './tomato_character.png';
 import { MdCardTravel, MdAdd, MdRadioButtonChecked, MdPeopleOutline, MdCalendarToday } from 'react-icons/md';
+import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -13,10 +14,21 @@ const MainPage = () => {
     const [loading, setLoading] = useState(true);
     const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
     const [inviteCodeInput, setInviteCodeInput] = useState('');
+    const [modal, setModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        onConfirm: null
+    });
+
+    const showAlert = (type, title, message, onConfirm = null) => {
+        setModal({ isOpen: true, type, title, message, onConfirm });
+    };
 
     const handleJoinProject = async () => {
         if (!inviteCodeInput.trim()) {
-            alert("초대 코드를 입력해 주세요.");
+            showAlert('error', '입력 오류', '초대 코드를 입력해 주세요.');
             return;
         }
 
@@ -32,16 +44,15 @@ const MainPage = () => {
             });
             const result = await response.json();
             if (response.ok) {
-                alert("프로젝트 참여에 성공했습니다!");
                 setIsJoinModalOpen(false);
                 setInviteCodeInput('');
-                fetchMyProjects(); // 목록 갱신
+                showAlert('success', '참여 완료', "프로젝트 참여에 성공했습니다!", () => fetchMyProjects());
             } else {
-                alert(result.message || "프로젝트 참여에 실패했습니다.");
+                showAlert('error', '참여 실패', result.message || "프로젝트 참여에 실패했습니다.");
             }
         } catch (error) {
             console.error("Error joining project:", error);
-            alert("서버 오류가 발생했습니다.");
+            showAlert('error', '서버 오류', "서버 오류가 발생했습니다.");
         }
     };
 
@@ -65,11 +76,14 @@ const MainPage = () => {
             const result = await response.json();
             console.log("My Projects API Result:", result);
 
-            if (response.ok && result.data && result.data.content) {
-                setProjects(result.data.content);
+            if (response.ok && result?.data?.content) {
+                setProjects(Array.isArray(result.data.content) ? result.data.content : []);
+            } else {
+                setProjects([]);
             }
         } catch (error) {
             console.error("Error fetching my projects:", error);
+            setProjects([]);
         } finally {
             setLoading(false);
         }
@@ -77,11 +91,16 @@ const MainPage = () => {
 
     const calculateWeeks = (start, end) => {
         if (!start || !end) return 0;
-        const startDate = new Date(start);
-        const endDate = new Date(end);
-        const diffTime = Math.abs(endDate - startDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return Math.floor(diffDays / 7) || 1;
+        try {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            if (isNaN(startDate) || isNaN(endDate)) return 0;
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return Math.floor(diffDays / 7) || 1;
+        } catch (e) {
+            return 0;
+        }
     };
 
     const handleCreateProject = () => {
@@ -140,6 +159,15 @@ const MainPage = () => {
                     </div>
                 )}
 
+                <AlertModal 
+                    isOpen={modal.isOpen}
+                    type={modal.type}
+                    title={modal.title}
+                    message={modal.message}
+                    onClose={() => setModal(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={modal.onConfirm}
+                />
+
                 <section className="project-section">
                     <div className="section-header">
                         <MdRadioButtonChecked className="section-header-icon" />
@@ -152,10 +180,10 @@ const MainPage = () => {
                         <>
                             <div className="project-grid">
                                 {projects.map(project => (
-                                    <div key={project.projectId} className="project-card">
-                                        <h3 className="card-title">{project.name}</h3>
+                                    <div key={project?.projectId || Math.random()} className="project-card">
+                                        <h3 className="card-title">{project?.name || '제목 없음'}</h3>
                                         <p className="card-date">
-                                            {project.startedAt?.replace(/-/g, '.')} ~ {project.dueAt?.replace(/-/g, '.')}
+                                            {(project?.startedAt || '').toString().replace(/-/g, '.')} ~ {(project?.dueAt || '').toString().replace(/-/g, '.')}
                                         </p>
                                         <div className="card-stats">
                                             <span className="stat-item">

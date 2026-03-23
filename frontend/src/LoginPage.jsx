@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import tomatoImg from './tomato_character.png';
+import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -12,6 +13,17 @@ const LoginPage = () => {
         email: '',
         password: ''
     });
+    const [modal, setModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        onConfirm: null
+    });
+
+    const showAlert = (type, title, message, onConfirm = null) => {
+        setModal({ isOpen: true, type, title, message, onConfirm });
+    };
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
@@ -27,7 +39,7 @@ const LoginPage = () => {
 
     const handleLogin = async () => {
         if (!loginInfo.email || !loginInfo.password) {
-            alert('이메일과 비밀번호를 모두 입력해 주세요.');
+            showAlert('error', '입력 오류', '이메일과 비밀번호를 모두 입력해 주세요.');
             return;
         }
 
@@ -50,15 +62,14 @@ const LoginPage = () => {
                 localStorage.setItem("accessToken", result.data.accessToken);
                 localStorage.setItem("refreshToken", result.data.refreshToken);
                 localStorage.setItem("userId", result.data.userId); // userId 저장 추가
-                alert('로그인에 성공했습니다!');
-                navigate('/main');
+                showAlert('success', '로그인 성공', '토마토에 오신 것을 환영합니다!', () => navigate('/main'));
             } else {
                 // 에러 처리 (400, 401 등)
-                alert(result.message || '로그인에 실패했습니다. 정보를 확인해 주세요.');
+                showAlert('error', '로그인 실패', result.message || '로그인에 실패했습니다. 정보를 확인해 주세요.');
             }
         } catch (error) {
             console.error('Login error:', error);
-            alert('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+            showAlert('error', '서버 오류', '서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         }
     };
 
@@ -176,6 +187,17 @@ const LoginPage = () => {
                     </div>
                 </div>
             </div>
+            
+            <AlertModal 
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                onClose={() => {
+                    setModal(prev => ({ ...prev, isOpen: false }));
+                    if (modal.onConfirm) modal.onConfirm();
+                }}
+            />
         </div>
     );
 };

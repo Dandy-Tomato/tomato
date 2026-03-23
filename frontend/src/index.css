@@ -6,14 +6,100 @@
 
 body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
         'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
         sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: #f8f9fa;
+    color: #333;
 }
 
-code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-        monospace;
+/* Global Modal Styles */
+.common-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+    animation: commonFadeIn 0.2s ease-out;
+}
+
+.common-alert-modal {
+    background-color: #ffffff;
+    width: 90%;
+    max-width: 340px;
+    padding: 32px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: commonScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.common-modal-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.common-modal-icon-wrap.success { background-color: #fff4f2; color: #ee7c62; }
+.common-modal-icon-wrap.error { background-color: #fff0f0; color: #ff5252; }
+.common-modal-icon-wrap.info { background-color: #f0f7ff; color: #4dabf7; }
+
+.common-modal-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.common-modal-desc {
+    font-size: 14px;
+    color: #777;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    white-space: pre-line;
+}
+
+.common-modal-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #ee7c62;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.common-modal-btn:hover {
+    background-color: #e06b51;
+}
+
+.common-modal-btn.error { background-color: #ff5252; }
+.common-modal-btn.error:hover { background-color: #e04545; }
+
+@keyframes commonFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes commonScaleUp {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import './ProjectCreatePage.css';
 import { SKILLS, DOMAINS } from './constants';
 import { MdFolder, MdEdit, MdHandyman, MdShoppingBag, MdCalendarMonth, MdExpandMore } from 'react-icons/md';
+import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -21,6 +22,17 @@ const ProjectCreatePage = () => {
         techSkillIds: [],
         domainIds: []
     });
+    const [modal, setModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        onConfirm: null
+    });
+
+    const showAlert = (type, title, message, onConfirm = null) => {
+        setModal({ isOpen: true, type, title, message, onConfirm });
+    };
 
     const [loading, setLoading] = useState(isEditMode);
 
@@ -107,14 +119,13 @@ const ProjectCreatePage = () => {
         e.preventDefault();
         
         if (!formData.name || !formData.description || !formData.startedAt || !formData.dueAt) {
-            alert("필수 정보를 모두 입력해 주세요.");
+            showAlert('error', '입력 오류', '필수 정보를 모두 입력해 주세요.');
             return;
         }
 
         const token = localStorage.getItem("accessToken");
         if (!token) {
-            alert("로그인이 필요합니다.");
-            navigate('/');
+            showAlert('error', '로그인 필요', '로그인이 필요합니다.', () => navigate('/'));
             return;
         }
 
@@ -139,14 +150,14 @@ const ProjectCreatePage = () => {
 
             const result = await response.json();
             if (response.ok) {
-                alert(isEditMode ? "프로젝트가 성공적으로 수정되었습니다!" : "프로젝트가 성공적으로 생성되었습니다!");
-                navigate(isEditMode ? `/projects/${editProjectId}` : '/main');
+                showAlert('success', '완료', isEditMode ? "프로젝트가 성공적으로 수정되었습니다!" : "프로젝트가 성공적으로 생성되었습니다!", 
+                    () => navigate(isEditMode ? `/projects/${editProjectId}` : '/main'));
             } else {
-                alert(result.message || "작업에 실패했습니다.");
+                showAlert('error', '오류', result.message || "작업에 실패했습니다.");
             }
         } catch (error) {
             console.error("Error creating project:", error);
-            alert("서버 오류가 발생했습니다.");
+            showAlert('error', '서버 오류', "서버 오류가 발생했습니다.");
         }
     };
 
@@ -291,6 +302,14 @@ const ProjectCreatePage = () => {
                     </form>
                 </div>
             </main>
+            <AlertModal 
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                onClose={() => setModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={modal.onConfirm}
+            />
         </div>
     );
 };

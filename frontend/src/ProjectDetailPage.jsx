@@ -5,8 +5,10 @@ import './ProjectDetailPage.css';
 import { SKILLS, DOMAINS, POSITIONS } from './constants';
 import { 
     MdEdit, MdContentCopy, MdKeyboardArrowDown, MdKeyboardArrowUp,
-    MdAutoAwesome, MdSearch, MdBookmarkBorder, MdHistory, MdBookmark
+    MdAutoAwesome, MdSearch, MdBookmarkBorder, MdHistory, MdBookmark,
+    MdAdd, MdPeopleOutline, MdPersonAdd
 } from 'react-icons/md';
+import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -18,6 +20,18 @@ const ProjectDetailPage = () => {
     const [isDetailsOpen, setIsDetailsOpen] = useState(true);
     const [activeTab, setActiveTab] = useState('추천 주제');
     const [recommendations, setRecommendations] = useState([]);
+    const [modal, setModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        onConfirm: null,
+        showCancel: false
+    });
+
+    const showAlert = (type, title, message, onConfirm = null, showCancel = false) => {
+        setModal({ isOpen: true, type, title, message, onConfirm, showCancel });
+    };
 
     const currentUserId = Number(localStorage.getItem('userId'));
 
@@ -36,8 +50,7 @@ const ProjectDetailPage = () => {
             if (response.ok && result.data) {
                 setProject(result.data);
             } else {
-                alert("프로젝트 정보를 불러오지 못했습니다.");
-                navigate('/main');
+                showAlert('error', '오류', "프로젝트 정보를 불러오지 못했습니다.", () => navigate('/main'));
             }
         } catch (error) {
             console.error("Error fetching project detail:", error);
@@ -61,10 +74,46 @@ const ProjectDetailPage = () => {
         }
     };
 
-    const copyInviteCode = () => {
-        if (project?.inviteCode) {
-            navigator.clipboard.writeText(project.inviteCode);
-            alert("초대 코드가 복사되었습니다.");
+    const copyInviteCode = async () => {
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/invite-code`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            if (response.ok && result.data?.inviteCode) {
+                await navigator.clipboard.writeText(result.data.inviteCode);
+                showAlert('success', '복사 완료!', '초대 코드가 클립보드에 복사되었습니다.\n팀원들에게 공유해 보세요.');
+            } else {
+                showAlert('error', '복사 실패', "초대 코드를 가져오지 못했습니다.");
+            }
+        } catch (error) {
+            console.error("Error fetching invite code:", error);
+            showAlert('error', '오류', "초대 코드 복사 중 오류가 발생했습니다.");
+        }
+    };
+
+    const handleLeaveProject = () => {
+        showAlert('info', '프로젝트 나가기', "정말로 이 프로젝트에서 나가시겠습니까?", () => executeLeaveProject(), true);
+    };
+
+    const executeLeaveProject = async () => {
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/members`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            
+            if (response.ok) {
+                showAlert('success', '탈퇴 완료', "프로젝트에서 성공적으로 나갔습니다.", () => navigate('/main'));
+            } else {
+                showAlert('error', '나가기 실패', result.message || "프로젝트 나가기에 실패했습니다.");
+            }
+        } catch (error) {
+            console.error("Error leaving project:", error);
+            showAlert('error', '서버 오류', "서버 오류가 발생했습니다.");
         }
     };
 
@@ -92,9 +141,11 @@ const ProjectDetailPage = () => {
                             <p className="project-owner">{project.owner.nickname}~</p>
                         </div>
                         <div className="header-right">
-                            <span className="member-count-badge">👥 {project.memberCount}명</span>
+                            <div className="member-count-badge">
+                                <MdPeopleOutline className="m-icon" /> <span>{project.memberCount}명</span>
+                            </div>
                             <button className="copy-code-button" onClick={copyInviteCode}>
-                                <MdContentCopy className="btn-icon" /> 초대코드 복사하기
+                                <MdPersonAdd className="btn-icon" /> 초대코드 복사하기
                             </button>
                             {isOwner && (
                                 <button className="edit-icon-button" onClick={() => navigate(`/projects/create?edit=${projectId}`)}>
@@ -125,9 +176,11 @@ const ProjectDetailPage = () => {
                                     ))}
                                 </div>
                             </div>
-                            <div className="detail-footer">
-                                <button className="leave-project-btn">프로젝트 나가기</button>
-                            </div>
+                            {!isOwner && (
+                                <div className="detail-footer">
+                                    <button className="leave-project-link" onClick={handleLeaveProject}>프로젝트 나가기</button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -174,6 +227,16 @@ const ProjectDetailPage = () => {
                         </div>
                     </section>
                 </div>
+
+                <AlertModal 
+                    isOpen={modal.isOpen}
+                    type={modal.type}
+                    title={modal.title}
+                    message={modal.message}
+                    onClose={() => setModal(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={modal.onConfirm}
+                    showCancel={modal.showCancel}
+                />
             </main>
         </div>
     );

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './SignupPage.css';
 import { POSITIONS, SKILLS } from './constants';
+import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -10,6 +11,17 @@ const SignupPage = () => {
     const location = useLocation();
     const [step, setStep] = useState(1);
     const [isSocial, setIsSocial] = useState(false);
+    const [modal, setModal] = useState({
+        isOpen: false,
+        type: 'success',
+        title: '',
+        message: '',
+        onConfirm: null
+    });
+
+    const showAlert = (type, title, message, onConfirm = null) => {
+        setModal({ isOpen: true, type, title, message, onConfirm });
+    };
 
     // Step 1 State
     const [loginInfo, setLoginInfo] = useState({
@@ -95,8 +107,10 @@ const SignupPage = () => {
     };
 
     const handleSignupStep1 = async () => {
-        if (!emailAvailable) return alert('이메일 중복 확인이 필요합니다.');
-        if (!loginInfo.password || loginInfo.password !== loginInfo.confirmPassword) return alert('비밀번호가 일치하지 않습니다.');
+        if (!emailAvailable) return showAlert('error', '중복 확인 필요', '이메일 중복 확인이 필요합니다.');
+        if (!loginInfo.password || loginInfo.password !== loginInfo.confirmPassword) {
+            return showAlert('error', '비밀번호 불일치', '비밀번호가 일치하지 않습니다.');
+        }
 
         try {
             // 1. 회원가입 요청
@@ -121,19 +135,19 @@ const SignupPage = () => {
                         localStorage.setItem("refreshToken", loginResult.data.refreshToken);
                         setStep(2);
                     } else {
-                        alert('자동 로그인에 실패했습니다. 다시 시도해 주세요.');
+                        showAlert('error', '로그인 오류', '자동 로그인에 실패했습니다. 다시 시도해 주세요.');
                     }
                 } catch (loginError) {
                     console.error('Auto login error:', loginError);
-                    alert('로그인 처리 중 오류가 발생했습니다.');
+                    showAlert('error', '서버 오류', '로그인 처리 중 오류가 발생했습니다.');
                 }
             } else {
                 const signupResult = await signupResponse.json();
-                alert(signupResult.message || '회원가입에 실패했습니다.');
+                showAlert('error', '회원가입 실패', signupResult.message || '회원가입에 실패했습니다.');
             }
         } catch (error) {
             console.error('Signup error:', error);
-            alert('서버 연결 실패');
+            showAlert('error', '서버 오류', '서버 연결 실패');
         }
     };
 
@@ -175,7 +189,7 @@ const SignupPage = () => {
         if (!company) return;
         // Check if the company is already added
         if (profile.companies.some(c => c.id === company.id)) {
-            alert('이미 추가된 기업입니다.');
+            showAlert('info', '이미 추가됨', '이미 추가된 기업입니다.');
             return;
         }
         setProfile(prev => ({
@@ -201,7 +215,7 @@ const SignupPage = () => {
     };
 
     const handleFinalSubmit = async () => {
-        if (!profile.nickname) return alert('닉네임을 입력해 주세요.');
+        if (!profile.nickname) return showAlert('error', '닉네임 필수', '닉네임을 입력해 주세요.');
 
         const body = {
             nickname: profile.nickname,
@@ -232,19 +246,18 @@ const SignupPage = () => {
                 const result = await response.json();
                 console.log("Onboarding Response - Result:", result);
 
-                alert('회원가입 및 프로필 설정이 완료되었습니다!');
+                showAlert('success', '가입 완료', '회원가입 및 프로필 설정이 완료되었습니다!', () => navigate('/main'));
                 if (profile.nickname) {
                     localStorage.setItem('nickname', profile.nickname);
                 }
-                navigate('/main');
             } else {
                 const result = await response.json();
                 console.error("Onboarding failed:", result);
-                alert(`${result.message || '프로필 설정에 실패했습니다.'} (코드: ${response.status})`);
+                showAlert('error', '오류 발생', `${result.message || '프로필 설정에 실패했습니다.'} (코드: ${response.status})`);
             }
         } catch (error) {
             console.error('Onboarding submit error:', error);
-            alert('서버 오류가 발생했습니다. 다시 시도해 주세요.');
+            showAlert('error', '서버 오류', '서버 오류가 발생했습니다. 다시 시도해 주세요.');
         }
     };
 
@@ -432,7 +445,7 @@ const SignupPage = () => {
                             if (skillResults.length > 0) {
                                 addSkill(skillResults[0]);
                             } else {
-                                alert("검색 결과가 없습니다. 목록에서 선택해 주세요.");
+                                showAlert('info', '검색 결과 없음', '검색 결과가 없습니다. 목록에서 선택해 주세요.');
                             }
                         }}
                     >추가</button>
@@ -474,6 +487,17 @@ const SignupPage = () => {
                 {step === 2 && renderStep2()}
                 {step === 3 && renderStep3()}
             </div>
+
+            <AlertModal 
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                onClose={() => {
+                    setModal(prev => ({ ...prev, isOpen: false }));
+                    if (modal.onConfirm) modal.onConfirm();
+                }}
+            />
         </div>
     );
 };
