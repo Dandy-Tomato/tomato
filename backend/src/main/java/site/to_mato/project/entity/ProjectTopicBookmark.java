@@ -35,7 +35,7 @@ public class ProjectTopicBookmark extends SoftDeleteEntity {
     @JoinColumn(name = "topic_id", nullable = false)
     private Topic topic;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private ProjectTopicBookmark(Project project, Topic topic) {
         this.project = project;
         this.topic = topic;

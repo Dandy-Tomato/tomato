@@ -40,7 +40,7 @@ public class ActionLog {
     @Column(name = "meta")
     private String meta;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private ActionLog(
             Long actorUserId,
             Long projectId,

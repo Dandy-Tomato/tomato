@@ -38,7 +38,7 @@ public class CompanySkill {
     @JoinColumn(name = "skill_id")
     private Skill skill;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private CompanySkill(Company company, Skill skill) {
         this.company = company;
         this.skill = skill;

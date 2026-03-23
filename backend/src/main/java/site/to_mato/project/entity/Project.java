@@ -63,7 +63,7 @@ public class Project extends SoftDeleteEntity {
     @JoinColumn(name = "confirmed_child_topic_id")
     private ChildTopic confirmedChildTopic;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private Project(
             User owner,
             String name,
