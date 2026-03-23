@@ -49,6 +49,7 @@ public class UserService {
                 .toList();
 
         return new UserProfileResponse(
+                user.getId(),
                 includeEmail ? user.getEmail() : null,
                 user.getNickname(),
                 user.getGithubUsername(),

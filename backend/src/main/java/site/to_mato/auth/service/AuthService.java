@@ -109,7 +109,7 @@ public class AuthService {
 
         refreshTokenStore.save(refresh, userId);
 
-        return TokenResponse.of(access, refresh);
+        return TokenResponse.of(userId, access, refresh);
     }
 
     public TokenResponse refresh(String oldRefreshToken) {
@@ -134,7 +134,7 @@ public class AuthService {
 
         refreshTokenStore.rotate(oldRefreshToken, newRefresh, userId);
 
-        return TokenResponse.of(newAccess, newRefresh);
+        return TokenResponse.of(userId, newAccess, newRefresh);
     }
 
     public void logout(String refreshToken) {
