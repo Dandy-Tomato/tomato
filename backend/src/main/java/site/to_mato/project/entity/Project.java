@@ -103,4 +103,14 @@ public class Project extends SoftDeleteEntity {
         this.startedAt = startedAt;
         this.dueAt = dueAt;
     }
+
+    public void confirmTopic(ChildTopic childTopic) {
+        this.topicState = true;
+        this.confirmedChildTopic = childTopic;
+    }
+
+    public void clearConfirmedTopic() {
+        this.topicState = false;
+        this.confirmedChildTopic = null;
+    }
 }

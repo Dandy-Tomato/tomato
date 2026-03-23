@@ -33,9 +33,9 @@ public class ChildTopic {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "topic_id", nullable = false)
-    private Topic topicId;
+    private Topic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    private Project projectId;
+    private Project project;
 }

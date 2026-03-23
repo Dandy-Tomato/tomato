@@ -46,6 +46,7 @@ public enum ErrorCode {
     ALREADY_JOINED_PROJECT(HttpStatus.BAD_REQUEST, 3503, "이미 참여 중인 프로젝트입니다."),
     PROJECT_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, 3504, "프로젝트 멤버를 찾을 수 없습니다."),
     PROJECT_FORBIDDEN(HttpStatus.FORBIDDEN, 3505, "해당 프로젝트에 대한 권한이 없습니다."),
+    CHILD_TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, 3506, "존재하지 않는 하위 주제입니다."),
 
     // =========================
     // 4000: TEAM
