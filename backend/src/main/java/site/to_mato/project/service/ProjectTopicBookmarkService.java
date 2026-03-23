@@ -4,12 +4,12 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import site.to_mato.project.entity.Project;
+import site.to_mato.project.entity.ProjectTopicBookmark;
 import site.to_mato.project.repository.ProjectRepository;
+import site.to_mato.project.repository.ProjectTopicBookmarkRepository;
 import site.to_mato.recommendation.entity.enums.ActionType;
 import site.to_mato.recommendation.service.ActionLogService;
-import site.to_mato.project.entity.ProjectTopicBookmark;
 import site.to_mato.topic.entity.Topic;
-import site.to_mato.project.repository.ProjectTopicBookmarkRepository;
 import site.to_mato.topic.repository.TopicRepository;
 
 @Service
@@ -29,7 +29,7 @@ public class ProjectTopicBookmarkService {
                 .orElse(null);
 
         if (bookmark != null) {
-            bookmark.softDelete();
+            bookmarkRepository.delete(bookmark);
             return false;
         }
 
@@ -41,5 +41,4 @@ public class ProjectTopicBookmarkService {
 
         return true;
     }
-
 }

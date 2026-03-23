@@ -19,9 +19,9 @@ import lombok.Getter;
 @Getter
 @Entity
 @Table(name = "projects")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE project_id = ?")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Project extends SoftDeleteEntity {
 
     @Id
@@ -41,7 +41,7 @@ public class Project extends SoftDeleteEntity {
     @Column(name = "due_at")
     private LocalDate dueAt;
 
-    @Column(name = "invite_code")
+    @Column(name = "invite_code", unique = true)
     private String inviteCode;
 
     @Column(name = "topic_state")

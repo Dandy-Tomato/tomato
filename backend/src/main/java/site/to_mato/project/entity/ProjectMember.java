@@ -13,8 +13,16 @@ import site.to_mato.user.entity.User;
 
 @Getter
 @Entity
-@Table(name = "project_members")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(
+        name = "project_members",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_project_member",
+                        columnNames = {"project_id", "user_id"}
+                )
+        }
+)
 @SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE project_members SET deleted_at = CURRENT_TIMESTAMP WHERE project_member_id = ?")
 public class ProjectMember extends SoftDeleteEntity {

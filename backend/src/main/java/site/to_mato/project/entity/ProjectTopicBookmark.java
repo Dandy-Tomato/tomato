@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import site.to_mato.common.entity.SoftDeleteEntity;
+import site.to_mato.common.entity.BaseEntity;
 import site.to_mato.topic.entity.Topic;
 
 @Getter
@@ -20,7 +20,7 @@ import site.to_mato.topic.entity.Topic;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ProjectTopicBookmark extends SoftDeleteEntity {
+public class ProjectTopicBookmark extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
