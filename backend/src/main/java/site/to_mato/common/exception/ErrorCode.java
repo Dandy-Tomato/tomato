@@ -42,6 +42,10 @@ public enum ErrorCode {
     // =========================
     INVALID_PROJECT_DATE_RANGE(HttpStatus.BAD_REQUEST, 3500, "프로젝트 날짜 범위가 올바르지 않습니다."),
     PROJECT_OWNER_CANNOT_LEAVE(HttpStatus.BAD_REQUEST, 3501, "OWNER는 프로젝트를 나갈 수 없습니다."),
+    INVALID_PROJECT_INVITE_CODE(HttpStatus.BAD_REQUEST, 3502, "유효하지 않은 프로젝트 초대 코드입니다."),
+    ALREADY_JOINED_PROJECT(HttpStatus.BAD_REQUEST, 3503, "이미 참여 중인 프로젝트입니다."),
+    PROJECT_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, 3504, "프로젝트 멤버를 찾을 수 없습니다."),
+    PROJECT_FORBIDDEN(HttpStatus.FORBIDDEN, 3505, "해당 프로젝트에 대한 권한이 없습니다."),
 
     // =========================
     // 4000: TEAM

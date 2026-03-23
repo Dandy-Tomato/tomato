@@ -58,4 +58,8 @@ public class ProjectMember extends BaseEntity {
                 .role(ProjectRole.MEMBER)
                 .build();
     }
+
+    public boolean isOwner() {
+        return this.projectRole == ProjectRole.OWNER;
+    }
 }

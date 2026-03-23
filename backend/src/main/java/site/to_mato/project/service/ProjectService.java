@@ -10,6 +10,8 @@ import site.to_mato.catalog.repository.SkillRepository;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.project.dto.request.CreateProjectRequest;
+import site.to_mato.project.dto.request.JoinProjectRequest;
+import site.to_mato.project.dto.request.UpdateProjectRequest;
 import site.to_mato.project.dto.response.ProjectIdResponse;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectMember;
@@ -64,6 +66,107 @@ public class ProjectService {
         projectProfileService.addSelectedProfile(project, selectedSkills, selectedDomains);
 
         return ProjectIdResponse.of(project.getId());
+    }
+
+    @Transactional
+    public ProjectIdResponse updateProject(Long userId, Long projectId, UpdateProjectRequest request) {
+        if (request.dueAt().isBefore(request.startedAt())) {
+            throw new BusinessException(ErrorCode.INVALID_PROJECT_DATE_RANGE);
+        }
+
+        User user = getUser(userId);
+        Project project = getProject(projectId);
+        ProjectMember projectMember = getProjectMember(projectId, userId);
+
+        validateProjectOwner(projectMember);
+
+        List<Skill> selectedSkills = getSelectedSkills(request.techSkillIds());
+        List<Domain> selectedDomains = getSelectedDomains(request.domainIds());
+
+        project.update(
+                request.name(),
+                request.description(),
+                request.startedAt(),
+                request.dueAt()
+        );
+
+        projectProfileService.replaceSelectedProfile(project, selectedSkills, selectedDomains);
+
+        return ProjectIdResponse.of(project.getId());
+    }
+
+    @Transactional
+    public ProjectIdResponse deleteProject(Long userId, Long projectId) {
+        User user = getUser(userId);
+        Project project = getProject(projectId);
+        ProjectMember projectMember = getProjectMember(projectId, userId);
+
+        validateProjectOwner(projectMember);
+
+        project.softDelete();
+
+        return ProjectIdResponse.of(project.getId());
+    }
+
+    @Transactional
+    public ProjectIdResponse joinProject(Long userId, JoinProjectRequest request) {
+        User user = getUser(userId);
+        Project project = projectRepository.findByInviteCodeAndDeletedAtIsNull(request.inviteCode())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_PROJECT_INVITE_CODE));
+
+        boolean alreadyJoined = projectMemberRepository.existsByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
+                project.getId(),
+                userId
+        );
+        if (alreadyJoined) {
+            throw new BusinessException(ErrorCode.ALREADY_JOINED_PROJECT);
+        }
+
+        ProjectMember projectMember = ProjectMember.ofMember(project, user);
+        projectMemberRepository.save(projectMember);
+
+        projectProfileService.addMemberProfile(project, user);
+
+        return ProjectIdResponse.of(project.getId());
+    }
+
+    @Transactional
+    public ProjectIdResponse leaveProject(Long userId, Long projectId) {
+        User user = getUser(userId);
+        Project project = getProject(projectId);
+        ProjectMember projectMember = getProjectMember(projectId, userId);
+
+        if (projectMember.isOwner()) {
+            throw new BusinessException(ErrorCode.PROJECT_OWNER_CANNOT_LEAVE);
+        }
+
+        projectMemberRepository.delete(projectMember);
+        projectProfileService.removeMemberProfile(project, user);
+
+        return ProjectIdResponse.of(project.getId());
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Project getProject(Long projectId) {
+        return projectRepository.findByIdAndDeletedAtIsNull(projectId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
+    }
+
+    private ProjectMember getProjectMember(Long projectId, Long userId) {
+        return projectMemberRepository.findByProjectIdAndUserIdAndProjectDeletedAtIsNullAndUserDeletedAtIsNull(
+                projectId,
+                userId
+        ).orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_MEMBER_NOT_FOUND));
+    }
+
+    private void validateProjectOwner(ProjectMember projectMember) {
+        if (!projectMember.isOwner()) {
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN);
+        }
     }
 
     private List<Skill> getSelectedSkills(List<Long> skillIds) {

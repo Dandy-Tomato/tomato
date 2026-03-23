@@ -48,12 +48,18 @@ public class ProjectProfileService {
     @Transactional
     public void addSelectedProfile(Project project, List<Skill> selectedSkills, List<Domain> selectedDomains) {
         for (Skill skill : selectedSkills) {
-            addProjectSkill(project, skill, SELECTED_WEIGHT);
+            addSelectedSkill(project, skill);
         }
 
         for (Domain domain : selectedDomains) {
-            addProjectDomain(project, domain, SELECTED_WEIGHT);
+            addSelectedDomain(project, domain);
         }
+    }
+
+    @Transactional
+    public void replaceSelectedProfile(Project project, List<Skill> selectedSkills, List<Domain> selectedDomains) {
+        replaceSelectedSkills(project, selectedSkills);
+        replaceSelectedDomains(project, selectedDomains);
     }
 
     private void addUserSkills(Project project, Long userId) {
@@ -64,7 +70,7 @@ public class ProjectProfileService {
             if (skill == null) {
                 continue;
             }
-            addProjectSkill(project, skill, ProjectProfileService.MEMBER_WEIGHT);
+            addMemberSkill(project, skill);
         }
     }
 
@@ -76,7 +82,7 @@ public class ProjectProfileService {
             if (skill == null) {
                 continue;
             }
-            removeProjectSkill(project, skill.getId());
+            removeMemberSkill(project, skill.getId());
         }
     }
 
@@ -93,7 +99,7 @@ public class ProjectProfileService {
                 .toList();
 
         for (Domain domain : domains) {
-            addProjectDomain(project, domain, ProjectProfileService.MEMBER_WEIGHT);
+            addMemberDomain(project, domain);
         }
     }
 
@@ -110,26 +116,52 @@ public class ProjectProfileService {
                 .toList();
 
         for (Domain domain : domains) {
-            removeProjectDomain(project, domain.getId());
+            removeMemberDomain(project, domain.getId());
         }
     }
 
-    private void addProjectSkill(Project project, Skill skill, double weight) {
+    private void replaceSelectedSkills(Project project, List<Skill> selectedSkills) {
+        List<ProjectSkill> projectSkills =
+                projectSkillRepository.findAllByProjectIdAndProjectDeletedAtIsNull(project.getId());
+
+        for (ProjectSkill projectSkill : projectSkills) {
+            removeSelectedSkill(projectSkill);
+        }
+
+        for (Skill skill : selectedSkills) {
+            addSelectedSkill(project, skill);
+        }
+    }
+
+    private void replaceSelectedDomains(Project project, List<Domain> selectedDomains) {
+        List<ProjectDomain> projectDomains =
+                projectDomainRepository.findAllByProjectIdAndProjectDeletedAtIsNull(project.getId());
+
+        for (ProjectDomain projectDomain : projectDomains) {
+            removeSelectedDomain(projectDomain);
+        }
+
+        for (Domain domain : selectedDomains) {
+            addSelectedDomain(project, domain);
+        }
+    }
+
+    private void addMemberSkill(Project project, Skill skill) {
         Optional<ProjectSkill> optional =
                 projectSkillRepository.findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(project.getId(), skill.getId());
 
         if (optional.isPresent()) {
-            optional.get().increaseWeight(weight);
+            optional.get().increaseWeight(MEMBER_WEIGHT);
             return;
         }
 
-        projectSkillRepository.save(ProjectSkill.of(project, skill, weight));
+        projectSkillRepository.save(ProjectSkill.of(project, skill, MEMBER_WEIGHT));
     }
 
-    private void removeProjectSkill(Project project, Long skillId) {
+    private void removeMemberSkill(Project project, Long skillId) {
         projectSkillRepository.findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(project.getId(), skillId)
                 .ifPresent(projectSkill -> {
-                    projectSkill.decreaseWeight(ProjectProfileService.MEMBER_WEIGHT);
+                    projectSkill.decreaseWeight(MEMBER_WEIGHT);
 
                     if (projectSkill.isWeightZeroOrNegative()) {
                         projectSkillRepository.delete(projectSkill);
@@ -137,26 +169,66 @@ public class ProjectProfileService {
                 });
     }
 
-    private void addProjectDomain(Project project, Domain domain, double weight) {
+    private void addSelectedSkill(Project project, Skill skill) {
+        Optional<ProjectSkill> optional =
+                projectSkillRepository.findByProjectIdAndSkillIdAndProjectDeletedAtIsNull(project.getId(), skill.getId());
+
+        if (optional.isPresent()) {
+            optional.get().increaseWeight(SELECTED_WEIGHT);
+            return;
+        }
+
+        projectSkillRepository.save(ProjectSkill.of(project, skill, SELECTED_WEIGHT));
+    }
+
+    private void removeSelectedSkill(ProjectSkill projectSkill) {
+        projectSkill.decreaseWeight(SELECTED_WEIGHT);
+
+        if (projectSkill.isWeightZeroOrNegative()) {
+            projectSkillRepository.delete(projectSkill);
+        }
+    }
+
+    private void addMemberDomain(Project project, Domain domain) {
         Optional<ProjectDomain> optional =
                 projectDomainRepository.findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(project.getId(), domain.getId());
 
         if (optional.isPresent()) {
-            optional.get().increaseWeight(weight);
+            optional.get().increaseWeight(MEMBER_WEIGHT);
             return;
         }
 
-        projectDomainRepository.save(ProjectDomain.of(project, domain, weight));
+        projectDomainRepository.save(ProjectDomain.of(project, domain, MEMBER_WEIGHT));
     }
 
-    private void removeProjectDomain(Project project, Long domainId) {
+    private void removeMemberDomain(Project project, Long domainId) {
         projectDomainRepository.findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(project.getId(), domainId)
                 .ifPresent(projectDomain -> {
-                    projectDomain.decreaseWeight(ProjectProfileService.MEMBER_WEIGHT);
+                    projectDomain.decreaseWeight(MEMBER_WEIGHT);
 
                     if (projectDomain.isWeightZeroOrNegative()) {
                         projectDomainRepository.delete(projectDomain);
                     }
                 });
+    }
+
+    private void addSelectedDomain(Project project, Domain domain) {
+        Optional<ProjectDomain> optional =
+                projectDomainRepository.findByProjectIdAndDomainIdAndProjectDeletedAtIsNull(project.getId(), domain.getId());
+
+        if (optional.isPresent()) {
+            optional.get().increaseWeight(SELECTED_WEIGHT);
+            return;
+        }
+
+        projectDomainRepository.save(ProjectDomain.of(project, domain, SELECTED_WEIGHT));
+    }
+
+    private void removeSelectedDomain(ProjectDomain projectDomain) {
+        projectDomain.decreaseWeight(SELECTED_WEIGHT);
+
+        if (projectDomain.isWeightZeroOrNegative()) {
+            projectDomainRepository.delete(projectDomain);
+        }
     }
 }

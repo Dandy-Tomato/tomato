@@ -96,4 +96,11 @@ public class Project extends SoftDeleteEntity {
                 .topicState(false)
                 .build();
     }
+
+    public void update(String name, String description, LocalDate startedAt, LocalDate dueAt) {
+        this.name = name;
+        this.description = description;
+        this.startedAt = startedAt;
+        this.dueAt = dueAt;
+    }
 }
