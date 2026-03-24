@@ -9,6 +9,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.catalog.entity.Domain;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Entity
 @Table(name = "topics")
@@ -45,4 +48,7 @@ public class Topic {
 
     @Column(name = "source_repo_id", nullable = false)
     private Long sourceRepoId;
+
+    @OneToMany(mappedBy = "topic", fetch = FetchType.LAZY)
+    private List<TopicSkill> topicSkills = new ArrayList<>();
 }
