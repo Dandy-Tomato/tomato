@@ -90,17 +90,23 @@ def buildGitCommitUrl(String gitUrl, String commitSha) {
  */
 def resolveBranch() {
     def cached = env.PIPELINE_BRANCH?.trim()
-    if (cached) return cached
+    if (cached && cached != 'HEAD') return cached
 
     if (env.BRANCH_NAME?.trim()) return env.BRANCH_NAME.trim()
 
+    if (env.GIT_LOCAL_BRANCH?.trim()) return env.GIT_LOCAL_BRANCH.trim()
+
     if (env.GIT_BRANCH?.trim()) {
-        return env.GIT_BRANCH.replaceFirst(/^.*\//, '').trim()
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
     }
 
     try {
         if (fileExists('.git')) {
-            return sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+            def symbolic = sh(
+                script: "git symbolic-ref --short -q HEAD || true",
+                returnStdout: true
+            ).trim()
+            if (symbolic) return symbolic
         }
     } catch (Exception e) {
         echo "⚠️ 브랜치 정보를 가져오지 못했습니다: ${e.message}"
@@ -196,10 +202,6 @@ def sendMMNotify(boolean success, Map info) {
         lines << "**빌드 상세**: [Details](${info.buildUrl})"
     }
 
-    if (!success && info.details) {
-        lines << "**추가 정보**:\n${info.details}"
-    }
-
     def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
 
     // Mattermost로 보낼 payload 생성
@@ -222,6 +224,47 @@ def sendMMNotify(boolean success, Map info) {
     }
 }
 
+def detectBranch() {
+    if (env.BRANCH_NAME?.trim()) {
+        return env.BRANCH_NAME.trim()
+    }
+
+    if (env.GIT_LOCAL_BRANCH?.trim()) {
+        return env.GIT_LOCAL_BRANCH.trim()
+    }
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
+    }
+
+    if (fileExists('.git')) {
+        def symbolic = sh(
+            script: "git symbolic-ref --short -q HEAD || true",
+            returnStdout: true
+        ).trim()
+
+        if (symbolic) {
+            return symbolic
+        }
+
+        def remoteBranch = sh(
+            script: "git branch -r --contains HEAD | sed 's/^ *//' | head -n 1 || true",
+            returnStdout: true
+        ).trim()
+
+        if (remoteBranch) {
+            return remoteBranch.replaceFirst(/^origin\//, '')
+        }
+    }
+
+    return 'unknown'
+}
+
+def markStage(String stageName) {
+    env.LAST_STAGE = stageName
+    echo "[STAGE] LAST_STAGE = ${env.LAST_STAGE}"
+}
+
 pipeline {
     agent any
 
@@ -233,26 +276,23 @@ pipeline {
     environment {
         APP_DIR         = 'backend'
         GIT_URL         = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
-        GIT_BRANCH      = '*/develop'
+        CHECKOUT_BRANCH = '*/develop'
 
         DOCKER_IMAGE    = 'nnnnnara/tomato-backend'
 
-        EC2_HOST        = 'j14a508.p.ssafy.io'
+        EC2_HOST        = 'to-mato.site'
         EC2_USER        = 'ubuntu'
         DEPLOY_DIR      = '/home/ubuntu/tomato'
         COMPOSE_FILE    = 'docker-compose.prod.yml'
 
         HEALTHCHECK_URL = 'http://localhost/health'
-
-        // 실패 알림에서 "어느 단계에서 실패했는지" 보이기 위해 사용
-        LAST_STAGE      = 'START'
     }
 
     stages {
         stage('Check Build Environment') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Check Build Environment'
+                    markStage('Check Build Environment')
                 }
                 sh '''
                     set -eux
@@ -270,12 +310,12 @@ pipeline {
         stage('Checkout') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Checkout'
+                    markStage('Checkout')
                 }
                 deleteDir()
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: env.GIT_BRANCH]],
+                    branches: [[name: env.CHECKOUT_BRANCH]],
                     userRemoteConfigs: [[
                         url: env.GIT_URL,
                         credentialsId: 'gitlab-http-creds'
@@ -287,13 +327,10 @@ pipeline {
         stage('Collect Build Metadata') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Collect Build Metadata'
+                    markStage('Collect Build Metadata')
 
                     // Mattermost 알림에서 쓸 메타데이터를 미리 수집
-                    env.PIPELINE_BRANCH = sh(
-                        script: "git rev-parse --abbrev-ref HEAD",
-                        returnStdout: true
-                    ).trim()
+                    env.PIPELINE_BRANCH = detectBranch()
 
                     env.PIPELINE_COMMIT_SHA = sh(
                         script: "git rev-parse HEAD",
@@ -328,7 +365,7 @@ pipeline {
         stage('Build Backend') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Build Backend'
+                    markStage('Build Backend')
                 }
                 dir("${env.APP_DIR}") {
                     sh '''
@@ -357,7 +394,7 @@ EOF
         stage('Docker Build') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Docker Build'
+                    markStage('Docker Build')
                 }
                 dir("${env.APP_DIR}") {
                     sh '''
@@ -377,7 +414,7 @@ EOF
         stage('Docker Push') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Docker Push'
+                    markStage('Docker Push')
                 }
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
@@ -398,7 +435,7 @@ EOF
         stage('Deploy to EC2') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Deploy to EC2'
+                    markStage('Deploy to EC2')
                 }
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh("""
@@ -438,7 +475,7 @@ REMOTE_SCRIPT
         stage('Verify Deployment') {
             steps {
                 script {
-                    env.LAST_STAGE = 'Verify Deployment'
+                    markStage('Verify Deployment')
                 }
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh("""
@@ -501,7 +538,7 @@ REMOTE_SCRIPT
                     buildUrl: env.BUILD_URL,
                     image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
                     server  : env.EC2_HOST,
-                    stage   : env.LAST_STAGE,
+                    stage   : env.LAST_STAGE?.trim() ?: 'START',
                     commit  : [
                         msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
                         url: env.PIPELINE_COMMIT_URL?.trim() ?: ''

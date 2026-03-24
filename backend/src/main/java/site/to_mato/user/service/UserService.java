@@ -23,46 +23,39 @@ public class UserService {
     private final UserDesiredCompanyRepository userDesiredCompanyRepository;
 
     public UserProfileResponse getMyProfile(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-
-        List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()
-                .map(userSkill -> userSkill.getSkill().getId())
-                .toList();
-
-        List<Long> companyIds = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
-                .map(userCompany -> userCompany.getCompany().getId())
-                .toList();
-
-        return UserProfileResponse.of(
-                user.getEmail(),
-                user.getNickname(),
-                user.getGithubUsername(),
-                user.getPosition() != null ? user.getPosition().getId() : null,
-                skillIds,
-                companyIds
-        );
+        User user = getUser(userId);
+        return buildUserProfileResponse(user, true);
     }
 
     public UserProfileResponse getUserProfile(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = getUser(userId);
+        return buildUserProfileResponse(user, false);
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private UserProfileResponse buildUserProfileResponse(User user, boolean includeEmail) {
+        Long userId = user.getId();
 
         List<Long> skillIds = userSkillRepository.findAllByUser_Id(userId).stream()
                 .map(userSkill -> userSkill.getSkill().getId())
                 .toList();
 
-        List<Long> companyIds = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
-                .map(userCompany -> userCompany.getCompany().getId())
+        List<String> companyNames = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
+                .map(userCompany -> userCompany.getCompany().getName())
                 .toList();
 
-        return UserProfileResponse.of(
-                null,
+        return new UserProfileResponse(
+                user.getId(),
+                includeEmail ? user.getEmail() : null,
                 user.getNickname(),
                 user.getGithubUsername(),
                 user.getPosition() != null ? user.getPosition().getId() : null,
                 skillIds,
-                companyIds
+                companyNames
         );
     }
 }

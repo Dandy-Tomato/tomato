@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import site.to_mato.catalog.entity.Position;
 import site.to_mato.common.entity.SoftDeleteEntity;
 import site.to_mato.user.entity.enums.Role;
@@ -14,6 +15,7 @@ import site.to_mato.user.entity.enums.Role;
 @Entity
 @Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SQLRestriction("deleted_at IS NULL")
 @SQLDelete(sql = "UPDATE users SET deleted_at = CURRENT_TIMESTAMP WHERE user_id = ?")
 public class User extends SoftDeleteEntity {
 

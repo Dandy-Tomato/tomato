@@ -41,7 +41,7 @@ public class ActionLogProcess extends BaseEntity {
     @JoinColumn(name = "action_log_id", nullable = false, unique = true)
     private ActionLog actionLog;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private ActionLogProcess(
             ActionLog actionLog,
             ActionLogProcessStatus status,
