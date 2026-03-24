@@ -36,11 +36,10 @@ public class ActionLog {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Lob
     @Column(name = "meta")
     private String meta;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private ActionLog(
             Long actorUserId,
             Long projectId,
