@@ -7,6 +7,8 @@ from app.routers.recommendation_router import router as recommendation_router
 from app.settings import settings
 from app.common.exception_handlers import register_exception_handlers
 
+import logging
+
 app = FastAPI(
     title="to-mato AI API",
     description="AI Server for recommendations and embeddings",
@@ -18,6 +20,7 @@ app.include_router(recommendation_router)
 
 register_exception_handlers(app)
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+)
