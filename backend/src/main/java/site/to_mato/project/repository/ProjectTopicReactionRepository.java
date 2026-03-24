@@ -7,8 +7,5 @@ import java.util.Optional;
 
 public interface ProjectTopicReactionRepository extends JpaRepository<ProjectTopicReaction, Long> {
 
-    Optional<ProjectTopicReaction> findByProjectIdAndTopicId(Long projectId, Long topicId);
-
-    void deleteByProjectIdAndTopicId(Long projectId, Long topicId);
-
+    Optional<ProjectTopicReaction> findByProject_IdAndTopic_Id(Long projectId, Long topicId);
 }

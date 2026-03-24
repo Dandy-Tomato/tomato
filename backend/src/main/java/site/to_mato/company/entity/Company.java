@@ -29,7 +29,7 @@ public class Company extends BaseEntity {
     @Column(name = "search_name")
     private String searchName;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private Company(String name, Domain domain) {
         this.name = name;
         this.domain = domain;

@@ -1,65 +1,3 @@
-// pipeline {
-//     agent any
-
-//     stages {
-//         stage('Inject application.yml') {
-//             steps {
-//                 withCredentials([file(credentialsId: 'backend-application-yml', variable: 'APP_YML')]) {
-//                     dir('backend') {
-//                         sh '''
-//                             echo "[INFO] Inject application.yml"
-//                             mkdir -p src/main/resources
-//                             cp "$APP_YML" src/main/resources/application.yml
-//                             ls -al src/main/resources
-//                         '''
-//                     }
-//                 }
-//             }
-//         }
-
-//         stage('Build Backend') {
-//             steps {
-//                 dir('backend') {
-//                     sh '''
-//                         echo "[INFO] Setup JDK 17"
-//                         export JAVA_HOME=/opt/jdk17
-//                         export PATH=$JAVA_HOME/bin:$PATH
-
-//                         echo "[INFO] Configure Gradle toolchain"
-//                         mkdir -p ~/.gradle
-//                         echo "org.gradle.java.installations.paths=/opt/jdk17" > ~/.gradle/gradle.properties
-
-//                         echo "[INFO] Start Gradle build"
-//                         chmod +x gradlew
-//                         ./gradlew clean build -x test --no-daemon
-//                     '''
-//                     // mkdir -p ~/.gradle : 필요한 부모 디렉토리에서 만들어서
-//                     // echo "org.gradle.java.installations.path=/opt/jdk17" > ~/.gradle/gradle.properties
-//                     // ㄴ 자바 17을 사용하기 위해
-//                 }
-//             }
-//         }
-//     }
-
-//     post {
-//         always {
-//             dir('backend') {
-
-//                 sh '''
-//                     echo "[INFO] Clean up injected application.yml"
-//                     rm -f src/main/resources/application.yml || true
-//                 '''
-//             }
-//         }
-//         success {
-//             echo 'Backend build succeeded.'
-//         }
-//         failure {
-//             echo 'Backend build failed.'
-//         }
-//     }
-// }
-
 import groovy.json.JsonOutput
 
 /*
@@ -68,10 +6,6 @@ import groovy.json.JsonOutput
  * =========================
  */
 
-/*
- * GitLab 저장소 URL과 커밋 SHA를 이용해서
- * 커밋 상세 페이지 URL을 만듦
- */
 def buildGitCommitUrl(String gitUrl, String commitSha) {
     if (!gitUrl?.trim() || !commitSha?.trim()) {
         return ''
@@ -79,149 +13,6 @@ def buildGitCommitUrl(String gitUrl, String commitSha) {
 
     def base = gitUrl.trim().replaceAll(/\.git$/, '')
     return "${base}/-/commit/${commitSha}"
-}
-
-/*
- * 알림용 브랜치명 해석
- * 우선순위:
- * 1) 미리 env에 캐시한 값
- * 2) Jenkins 기본 환경변수
- * 3) git 명령
- */
-def resolveBranch() {
-    def cached = env.PIPELINE_BRANCH?.trim()
-    if (cached && cached != 'HEAD') return cached
-
-    if (env.BRANCH_NAME?.trim()) return env.BRANCH_NAME.trim()
-
-    if (env.GIT_LOCAL_BRANCH?.trim()) return env.GIT_LOCAL_BRANCH.trim()
-
-    if (env.GIT_BRANCH?.trim()) {
-        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
-    }
-
-    try {
-        if (fileExists('.git')) {
-            def symbolic = sh(
-                script: "git symbolic-ref --short -q HEAD || true",
-                returnStdout: true
-            ).trim()
-            if (symbolic) return symbolic
-        }
-    } catch (Exception e) {
-        echo "⚠️ 브랜치 정보를 가져오지 못했습니다: ${e.message}"
-    }
-
-    return 'unknown'
-}
-
-/*
- * 알림용 작성자/푸셔 정보 해석
- * GitLab webhook 환경변수(GIT_PUSHER_USERNAME)가 있으면 우선 사용하고,
- * 없으면 마지막 커밋 작성자를 사용
- */
-def resolvePusherMention() {
-    def cached = env.PIPELINE_MENTION?.trim()
-    if (cached) return cached
-
-    def pusher = env.GIT_PUSHER_USERNAME?.trim()
-    if (pusher) {
-        return "@${pusher}"
-    }
-
-    try {
-        if (fileExists('.git')) {
-            return sh(
-                script: "git --no-pager show -s --format='%an <%ae>' HEAD",
-                returnStdout: true
-            ).trim()
-        }
-    } catch (Exception e) {
-        echo "⚠️ 작성자 정보를 가져오지 못했습니다: ${e.message}"
-    }
-
-    return 'Unknown'
-}
-
-/*
- * Mattermost 알림 전송 함수
- *
- * success = true  -> 성공 알림
- * success = false -> 실패 알림
- *
- * info:
- * - mention
- * - branch
- * - buildUrl
- * - image
- * - server
- * - stage
- * - commit.msg
- * - commit.url
- * - details
- *
- * 참고:
- * - webhook 전송 실패가 전체 pipeline 실패로 이어지지 않게 `|| true` 처리
- * - payload는 JSON 파일로 만든 뒤 curl로 전송
- */
-def sendMMNotify(boolean success, Map info) {
-    def titleLine = success
-        ? "## :jenkins1: 백엔드 CI/CD :_successs2: :happy_cat:"
-        : "## :jenkins5: 백엔드 CI/CD :sang_fail: :omgham:"
-
-    def lines = []
-
-    if (info.mention) {
-        lines << "**작성자**: ${info.mention}"
-    }
-
-    if (info.branch) {
-        lines << "**브랜치**: `${info.branch}`"
-    }
-
-    if (info.image) {
-        lines << "**이미지**: `${info.image}`"
-    }
-
-    if (info.server) {
-        lines << "**배포 서버**: `${info.server}`"
-    }
-
-    if (info.stage) {
-        lines << "**실패/현재 단계**: `${info.stage}`"
-    }
-
-    if (info.commit?.msg) {
-        def commitLine = info.commit?.url
-            ? "[${info.commit.msg}](${info.commit.url})"
-            : info.commit.msg
-        lines << "**커밋**: ${commitLine}"
-    }
-
-    if (info.buildUrl) {
-        lines << "**빌드 상세**: [Details](${info.buildUrl})"
-    }
-
-    def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
-
-    // Mattermost로 보낼 payload 생성
-    writeFile(
-        file: 'payload.json',
-        text: JsonOutput.toJson([
-            text      : text,
-            username  : "Jenkins",
-            icon_emoji: ":rocket:"
-        ])
-    )
-
-    withCredentials([string(credentialsId: 'mattermost-webhook', variable: 'MM_WEBHOOK')]) {
-        sh '''
-            curl -sS -f -X POST \
-              -H 'Content-Type: application/json' \
-              --data-binary @payload.json \
-              "$MM_WEBHOOK" || true
-        '''
-    }
 }
 
 def detectBranch() {
@@ -260,9 +51,103 @@ def detectBranch() {
     return 'unknown'
 }
 
+def resolveBranch() {
+    def cached = env.PIPELINE_BRANCH?.trim()
+    if (cached && cached != 'HEAD') return cached
+
+    return detectBranch()
+}
+
+def resolvePusherMention() {
+    def cached = env.PIPELINE_MENTION?.trim()
+    if (cached) return cached
+
+    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+    if (pusher) {
+        return "@${pusher}"
+    }
+
+    try {
+        if (fileExists('.git')) {
+            return sh(
+                script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                returnStdout: true
+            ).trim()
+        }
+    } catch (Exception e) {
+        echo "작성자 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'Unknown'
+}
+
 def markStage(String stageName) {
     env.LAST_STAGE = stageName
     echo "[STAGE] LAST_STAGE = ${env.LAST_STAGE}"
+}
+
+def sendMMNotify(boolean success, Map info) {
+    def titleLine = success
+        ? "## :jenkins1: AI CI/CD 성공 :happy_cat:"
+        : "## :jenkins5: AI CI/CD 실패 :omgham:"
+
+    def lines = []
+
+    if (info.mention) {
+        lines << "**작성자**: ${info.mention}"
+    }
+
+    if (info.branch) {
+        lines << "**브랜치**: `${info.branch}`"
+    }
+
+    if (info.image) {
+        lines << "**이미지**: `${info.image}`"
+    }
+
+    if (info.server) {
+        lines << "**배포 서버**: `${info.server}`"
+    }
+
+    if (info.stage) {
+        lines << "**실패/현재 단계**: `${info.stage}`"
+    }
+
+    if (info.commit?.msg) {
+        def commitLine = info.commit?.url
+            ? "[${info.commit.msg}](${info.commit.url})"
+            : info.commit.msg
+        lines << "**커밋**: ${commitLine}"
+    }
+
+    if (info.buildUrl) {
+        lines << "**빌드 상세**: [Details](${info.buildUrl})"
+    }
+
+    if (info.details) {
+        lines << "**비고**: ${info.details}"
+    }
+
+    def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
+
+    writeFile(
+        file: 'payload.json',
+        text: JsonOutput.toJson([
+            text      : text,
+            username  : "Jenkins",
+            icon_emoji: ":rocket:"
+        ])
+    )
+
+    withCredentials([string(credentialsId: 'mattermost-webhook', variable: 'MM_WEBHOOK')]) {
+        sh '''
+            set -eux
+            curl -sS -f -X POST \
+              -H 'Content-Type: application/json' \
+              --data-binary @payload.json \
+              "$MM_WEBHOOK"
+        '''
+    }
 }
 
 pipeline {
@@ -274,18 +159,16 @@ pipeline {
     }
 
     environment {
-        APP_DIR         = 'backend'
+        APP_DIR         = 'ai'
         GIT_URL         = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
         CHECKOUT_BRANCH = '*/develop'
 
-        DOCKER_IMAGE    = 'nnnnnara/tomato-backend'
+        AI_IMAGE        = 'nnnnnara/tomato-ai'
 
-        EC2_HOST        = 'to-mato.site'
+        EC2_HOST        = 'j14a508.p.ssafy.io'
         EC2_USER        = 'ubuntu'
         DEPLOY_DIR      = '/home/ubuntu/tomato'
-        COMPOSE_FILE    = 'docker-compose.prod.yml'
-
-        HEALTHCHECK_URL = 'http://localhost/health'
+        COMPOSE_FILE    = 'docker-compose.ai.prod.yml'
     }
 
     stages {
@@ -297,11 +180,11 @@ pipeline {
                 sh '''
                     set -eux
                     whoami
+                    pwd
                     echo "PATH=$PATH"
-                    echo "JAVA_HOME=${JAVA_HOME:-}"
-                    /opt/java/openjdk/bin/java -version
                     command -v docker
                     docker --version
+                    python3 --version || true
                     ls -l /var/run/docker.sock || true
                 '''
             }
@@ -312,7 +195,9 @@ pipeline {
                 script {
                     markStage('Checkout')
                 }
+
                 deleteDir()
+
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: env.CHECKOUT_BRANCH]],
@@ -321,15 +206,8 @@ pipeline {
                         credentialsId: 'gitlab-http-creds'
                     ]]
                 ])
-            }
-        }
 
-        stage('Collect Build Metadata') {
-            steps {
                 script {
-                    markStage('Collect Build Metadata')
-
-                    // Mattermost 알림에서 쓸 메타데이터를 미리 수집
                     env.PIPELINE_BRANCH = detectBranch()
 
                     env.PIPELINE_COMMIT_SHA = sh(
@@ -362,60 +240,57 @@ pipeline {
             }
         }
 
-        stage('Build Backend') {
+        stage('Validate AI Files') {
             steps {
                 script {
-                    markStage('Build Backend')
+                    markStage('Validate AI Files')
                 }
+
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
 
-                        export JAVA_HOME=/opt/java/openjdk
-                        export PATH="$JAVA_HOME/bin:$PATH"
+                        test -f Dockerfile
+                        test -f requirements.txt
+                        test -f app/main.py
+                        test -f app/settings.py
+                        test -f app/consumer/recommendation_event_consumer.py
 
-                        mkdir -p ~/.gradle
-                        cat > ~/.gradle/gradle.properties <<'EOF'
-org.gradle.java.installations.auto-detect=false
-org.gradle.java.installations.paths=/opt/java/openjdk
-EOF
+                        test -d app
+                        test -d app/consumer
 
-                        chmod +x gradlew
-
-                        ./gradlew clean bootJar -x test --no-daemon --stacktrace
-
-                        test -d build/libs
-                        test -n "$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' -print -quit)"
+                        echo "[INFO] AI project structure is valid"
+                        find app -maxdepth 2 -type f | sort
                     '''
                 }
             }
         }
 
-        stage('Docker Build') {
+        stage('Build AI Image') {
             steps {
                 script {
-                    markStage('Docker Build')
+                    markStage('Build AI Image')
                 }
+
                 dir("${env.APP_DIR}") {
                     sh '''
                         set -eux
-                        ls -al build/libs
-                        find build/libs -maxdepth 1 -type f -name '*.jar' | sort
 
                         docker build \
-                          -t ${DOCKER_IMAGE}:latest \
-                          -t ${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                          -t ${AI_IMAGE}:latest \
+                          -t ${AI_IMAGE}:${BUILD_NUMBER} \
                           .
                     '''
                 }
             }
         }
 
-        stage('Docker Push') {
+        stage('Push AI Image') {
             steps {
                 script {
-                    markStage('Docker Push')
+                    markStage('Push AI Image')
                 }
+
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKERHUB_USERNAME',
@@ -423,9 +298,12 @@ EOF
                 )]) {
                     sh '''
                         set -eux
+
                         echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-                        docker push ${DOCKER_IMAGE}:latest
-                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+
+                        docker push ${AI_IMAGE}:latest
+                        docker push ${AI_IMAGE}:${BUILD_NUMBER}
+
                         docker logout
                     '''
                 }
@@ -437,11 +315,17 @@ EOF
                 script {
                     markStage('Deploy to EC2')
                 }
+
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh("""
                         set -eux
 
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
+if [ ! -d ${DEPLOY_DIR} ]; then
+  echo "[ERROR] Deploy directory not found: ${DEPLOY_DIR}"
+  exit 1
+fi
+
 cd ${DEPLOY_DIR}
 
 if [ ! -f .env ]; then
@@ -449,20 +333,39 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-if grep -q '^BACKEND_IMAGE=' .env; then
-  sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER}|' .env
-else
-  echo 'BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER}' >> .env
+if [ ! -f ${COMPOSE_FILE} ]; then
+  echo "[ERROR] ${DEPLOY_DIR}/${COMPOSE_FILE} not found"
+  exit 1
 fi
 
-echo '[INFO] Current BACKEND_IMAGE in .env'
-grep '^BACKEND_IMAGE=' .env
+if ! docker network ls --format '{{.Name}}' | grep -qx 'tomato-net'; then
+  echo "[ERROR] docker network 'tomato-net' not found"
+  exit 1
+fi
 
-echo '[INFO] Pull new backend image'
-docker compose --env-file .env -f ${COMPOSE_FILE} pull backend
+if grep -q '^AI_IMAGE=' .env; then
+  sed -i 's|^AI_IMAGE=.*|AI_IMAGE=${AI_IMAGE}:${BUILD_NUMBER}|' .env
+else
+  echo 'AI_IMAGE=${AI_IMAGE}:${BUILD_NUMBER}' >> .env
+fi
 
-echo '[INFO] Recreate backend container'
-docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate backend
+echo '[INFO] Current AI_IMAGE in .env'
+grep '^AI_IMAGE=' .env
+
+echo '[INFO] Pull new AI image'
+docker compose --env-file .env -f ${COMPOSE_FILE} pull ai-api ai-consumer
+
+echo '[INFO] Recreate ai-api and ai-consumer'
+docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate ai-api ai-consumer
+
+echo '[INFO] Compose status'
+docker compose --env-file .env -f ${COMPOSE_FILE} ps
+
+echo '[INFO] AI API recent logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=50 ai-api || true
+
+echo '[INFO] AI Consumer recent logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=50 ai-consumer || true
 
 echo '[INFO] Remove dangling images'
 docker image prune -f
@@ -477,6 +380,7 @@ REMOTE_SCRIPT
                 script {
                     markStage('Verify Deployment')
                 }
+
                 sshagent(credentials: ['ec2-prod-ssh']) {
                     sh("""
                         set -eux
@@ -484,17 +388,20 @@ REMOTE_SCRIPT
                         ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
 cd ${DEPLOY_DIR}
 
-echo '[INFO] Compose status'
+echo '[INFO] Final compose status'
 docker compose --env-file .env -f ${COMPOSE_FILE} ps
 
-echo '[INFO] Wait for application startup'
-sleep 10
+echo '[INFO] Verify ai-api container is running'
+docker ps --filter "name=tomato-ai-api" --filter "status=running"
 
-echo '[INFO] Health check'
-curl -fsS ${HEALTHCHECK_URL}
+echo '[INFO] Verify ai-consumer container is running'
+docker ps --filter "name=tomato-ai-consumer" --filter "status=running"
 
-echo '[INFO] Backend recent logs'
-docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=100 backend
+echo '[INFO] Last ai-api logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=30 ai-api || true
+
+echo '[INFO] Last ai-consumer logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=30 ai-consumer || true
 REMOTE_SCRIPT
                     """.stripIndent())
                 }
@@ -505,48 +412,41 @@ REMOTE_SCRIPT
     post {
         success {
             script {
-                /*
-                 * 성공 시 Mattermost로 보내는 정보
-                 */
                 def buildInfo = [
                     mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
                     branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
                     buildUrl: env.BUILD_URL,
-                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    image   : "${env.AI_IMAGE}:${env.BUILD_NUMBER}",
                     server  : env.EC2_HOST,
-                    stage   : env.LAST_STAGE,
+                    stage   : env.LAST_STAGE?.trim() ?: 'START',
                     commit  : [
                         msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
                         url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
                     ]
                 ]
 
-                echo 'CI/CD pipeline succeeded.'
+                echo 'AI image build and deployment succeeded.'
                 sendMMNotify(true, buildInfo)
             }
         }
 
         failure {
             script {
-                /*
-                 * 실패 시 Mattermost로 보내는 정보
-                 * 마지막 수행 단계와 빌드 링크를 보내서 Mattermost에서 보고 바로 Jenkins 콘솔로 들어가도록 유도
-                 */
                 def buildInfo = [
                     mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
                     branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
                     buildUrl: env.BUILD_URL,
-                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    image   : "${env.AI_IMAGE}:${env.BUILD_NUMBER}",
                     server  : env.EC2_HOST,
                     stage   : env.LAST_STAGE?.trim() ?: 'START',
                     commit  : [
                         msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
                         url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
                     ],
-                    details : "최근 콘솔 로그 자동 첨부는 Jenkins Script Security 승인 이슈 때문에 비활성화했습니다. 빌드 상세 링크에서 실패 원인을 확인하세요."
+                    details : "빌드 상세 링크에서 실패 원인을 확인하세요."
                 ]
 
-                echo 'CI/CD pipeline failed.'
+                echo 'AI image build or deployment failed.'
                 sendMMNotify(false, buildInfo)
             }
         }

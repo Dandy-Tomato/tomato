@@ -44,7 +44,7 @@ public class ProjectTopicReaction extends BaseEntity {
     @JoinColumn(name = "topic_id", nullable = false)
     private Topic topic;
 
-    @Builder
+    @Builder(access = AccessLevel.PRIVATE)
     private ProjectTopicReaction(Project project, Topic topic, Reaction reaction) {
         this.project = project;
         this.topic = topic;
