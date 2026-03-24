@@ -5,12 +5,140 @@ import './ProjectDetailPage.css';
 import { SKILLS, DOMAINS, POSITIONS } from './constants';
 import { 
     MdEdit, MdContentCopy, MdKeyboardArrowDown, MdKeyboardArrowUp,
-    MdAutoAwesome, MdSearch, MdBookmarkBorder, MdHistory, MdBookmark,
-    MdAdd, MdPeopleOutline, MdPersonAdd
+    MdAutoAwesome, MdSearch, MdBookmarkBorder, MdBookmark,
+    MdAdd, MdPeopleOutline, MdPersonAdd, MdThumbUp, MdThumbDown,
+    MdArrowBack, MdRefresh, MdLightbulbOutline
 } from 'react-icons/md';
 import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+// 주제 상세 보기 컴포넌트
+const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, getDomainName, getSkillName }) => {
+    if (isLoading) return <div className="topic-detail-loading">데이터를 불러오는 중...</div>;
+    const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' || 
+                     topic.isBookmark === true || topic.isBookmark === 'true' || 
+                     topic.bookmarked === true || topic.bookmarked === 'true';
+
+    return (
+        <div className="topic-detail-view">
+            {/* 상단 헤더 섹션 */}
+            <div className="topic-detail-header-card">
+                <div className="topic-header-top">
+                    <span className="topic-domain-badge">{getDomainName(topic.domainId)}</span>
+                    <div className="topic-actions">
+                        <button 
+                            className={`topic-action-btn ${topic.isReaction === 'LIKE' ? 'active' : ''}`}
+                            onClick={() => onReaction(topic.topicId, 'LIKE')}
+                        >
+                            <MdThumbUp />
+                        </button>
+                        <button 
+                            className={`topic-action-btn bookmark ${isMarked ? 'active' : ''}`}
+                            onClick={() => onBookmark(topic.topicId)}
+                        >
+                            {isMarked ? <MdBookmark style={{ color: '#ee7c62' }} /> : <MdBookmarkBorder />}
+                        </button>
+                    </div>
+                </div>
+
+                <h1 className="topic-detail-title">{topic.title}</h1>
+                
+                <div className="topic-detail-skills">
+                    {topic.skills.map(id => (
+                        <span key={id} className="td-skill-tag">{getSkillName(id)}</span>
+                    ))}
+                </div>
+
+                <p className="topic-detail-description">{topic.description}</p>
+
+                <div className="topic-metadata-grid">
+                    <div className="metadata-item">
+                        <span className="meta-label">예상 개발 기간</span>
+                        <div className="meta-value-wrap">
+                            <span className="meta-icon">📅</span>
+                            <span className="meta-value">{topic.expectedDurationWeek || 0}주</span>
+                        </div>
+                    </div>
+                    <div className="metadata-item">
+                        <span className="meta-label">추천 팀원 수</span>
+                        <div className="meta-value-wrap">
+                            <span className="meta-icon">👥</span>
+                            <span className="meta-value">{topic.recommendedTeamSize || 0}명</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 이동 및 구체화 버튼 섹션 */}
+            <div className="topic-nav-actions">
+                <p className="nav-info-text">마음에 드신다면 AI로 주제를 더 구체화해보세요!</p>
+                <div className="nav-buttons">
+                    <button className="back-to-list-btn" onClick={onBack}>
+                        <MdArrowBack className="btn-icon" /> 목록으로
+                    </button>
+                    <button className="elaborate-btn" onClick={() => {/* 구체화 API 연동 예정 */}}>
+                        <MdAutoAwesome className="btn-icon" /> 구체화하기
+                    </button>
+                </div>
+            </div>
+
+            {/* 구체화 결과 섹션 (데이터가 있을 경우에만 표시) */}
+            {topic.elaboration && (
+                <div className="elaboration-section">
+                    <div className="elab-badge-row">
+                        <span className="elab-status-badge"><MdAutoAwesome /> 구체화 완료</span>
+                    </div>
+                    <h2 className="elab-title">{topic.elaboration.title}</h2>
+                    <p className="elab-subtitle">{topic.elaboration.subtitle}</p>
+
+                    <div className="elab-group">
+                        <h3 className="elab-group-label">핵심 기능</h3>
+                        <div className="feature-list">
+                            {topic.elaboration.features.map((feature, index) => (
+                                <div key={index} className="feature-item">
+                                    <div className="feature-num">{index + 1}</div>
+                                    <div className="feature-content">
+                                        <h4 className="f-title">{feature.title}</h4>
+                                        <p className="f-desc">{feature.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="elab-group">
+                        <h3 className="elab-group-label">추천 기술스택</h3>
+                        <div className="elab-skill-tags">
+                            {topic.elaboration.techStack.map(skill => (
+                                <span key={skill} className="e-skill-tag">{skill}</span>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="elab-group">
+                        <h3 className="elab-group-label">차별화 포인트</h3>
+                        <div className="differentiation-card">
+                            <MdLightbulbOutline className="diff-icon" />
+                            <p className="diff-text">{topic.elaboration.differentiation}</p>
+                        </div>
+                    </div>
+
+                    <div className="elab-footer">
+                        <div className="difficulty-display">
+                            <span className="diff-label-text">
+                                추천 기간 {topic.elaboration.durationRange}
+                            </span>
+                        </div>
+                        <button className="re-elaborate-btn">
+                            <MdRefresh className="btn-icon" /> 다시 구체화
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const ProjectDetailPage = () => {
     const { projectId } = useParams();
@@ -20,6 +148,10 @@ const ProjectDetailPage = () => {
     const [isDetailsOpen, setIsDetailsOpen] = useState(true);
     const [activeTab, setActiveTab] = useState('추천 주제');
     const [recommendations, setRecommendations] = useState([]);
+    const [visibleCount, setVisibleCount] = useState(6);
+    const [selectedTopicId, setSelectedTopicId] = useState(null);
+    const [topicDetail, setTopicDetail] = useState(null);
+    const [isTopicLoading, setIsTopicLoading] = useState(false);
     const [modal, setModal] = useState({
         isOpen: false,
         type: 'success',
@@ -28,6 +160,11 @@ const ProjectDetailPage = () => {
         onConfirm: null,
         showCancel: false
     });
+    
+    // 타 사용자 프로필 모달 상태
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [isUserLoading, setIsUserLoading] = useState(false);
 
     const showAlert = (type, title, message, onConfirm = null, showCancel = false) => {
         setModal({ isOpen: true, type, title, message, onConfirm, showCancel });
@@ -40,6 +177,14 @@ const ProjectDetailPage = () => {
         fetchRecommendations();
     }, [projectId]);
 
+    useEffect(() => {
+        if (selectedTopicId) {
+            fetchTopicDetail(selectedTopicId);
+        } else {
+            setTopicDetail(null);
+        }
+    }, [selectedTopicId]);
+
     const fetchProjectDetail = async () => {
         const token = localStorage.getItem("accessToken");
         try {
@@ -48,6 +193,8 @@ const ProjectDetailPage = () => {
             });
             const result = await response.json();
             if (response.ok && result.data) {
+                console.log("Fetched Project Detail:", result.data);
+                console.log("Project Members:", result.data.members);
                 setProject(result.data);
             } else {
                 showAlert('error', '오류', "프로젝트 정보를 불러오지 못했습니다.", () => navigate('/main'));
@@ -66,11 +213,107 @@ const ProjectDetailPage = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await response.json();
+            console.log("Recommendations List API Result:", result);
+            
             if (response.ok && result.data) {
-                setRecommendations(result.data);
+                const dataArray = Array.isArray(result.data) 
+                    ? result.data 
+                    : (result.data.content || []);
+                setRecommendations(dataArray);
             }
         } catch (error) {
             console.error("Error fetching recommendations:", error);
+        }
+    };
+
+    const fetchTopicDetail = async (topicId) => {
+        setIsTopicLoading(true);
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/recommendations/${topicId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            console.log("Topic Detail API Result:", result);
+
+            if (response.ok && result.data) {
+                setTopicDetail(Array.isArray(result.data) ? result.data[0] : result.data);
+            } else {
+                showAlert('error', '오류', '주제 상세 정보를 불러오지 못했습니다.');
+                setSelectedTopicId(null);
+            }
+        } catch (error) {
+            console.error("Error fetching topic detail:", error);
+            showAlert('error', '오류', '서버 통신 중 오류가 발생했습니다.');
+            setSelectedTopicId(null);
+        } finally {
+            setIsTopicLoading(false);
+        }
+    };
+
+    const handleReaction = async (topicId, reactionType) => {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/topics/${topicId}/reaction`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    reaction: reactionType,
+                    version: topicDetail?.reactionVersion || null
+                })
+            });
+
+            if (response.ok) {
+                // 성공 시 상세 정보를 다시 불러와서 최신 상태(애니메이션, 개수 등) 반영
+                fetchTopicDetail(topicId);
+                // 목록도 갱신
+                fetchRecommendations();
+            } else if (response.status === 409) {
+                const result = await response.json();
+                showAlert('error', '충돌 발생', result.message || '다른 사용자가 먼저 반응을 변경했습니다.');
+                fetchTopicDetail(topicId);
+            } else {
+                showAlert('error', '오류', '반응 처리에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error("Error handling reaction:", error);
+            showAlert('error', '오류', '통신 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleBookmarkToggle = async (topicId) => {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/topics/${topicId}/bookmark`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                const newStatus = result.data?.isBookmarked;
+                
+                // 목록(recommendations) 상태를 즉시 업데이트 (목록 API에 필드가 없어도 유지되게 함)
+                setRecommendations(prev => prev.map(t => 
+                    t.topicId === topicId ? { ...t, isBookmarked: newStatus } : t
+                ));
+
+                if (selectedTopicId === topicId) {
+                    fetchTopicDetail(topicId);
+                }
+            } else {
+                showAlert('error', '오류', '북마크 처리에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error("Error handling bookmark:", error);
+            showAlert('error', '오류', '통신 중 오류가 발생했습니다.');
         }
     };
 
@@ -117,12 +360,60 @@ const ProjectDetailPage = () => {
         }
     };
 
+    const fetchUserProfile = async (userId) => {
+        setIsUserLoading(true);
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const result = await response.json();
+            if (response.ok && result.data) {
+                setSelectedUser(result.data);
+                setIsUserModalOpen(true);
+            } else {
+                showAlert('error', '죄송합니다', '사용자 프로필을 불러올 수 없습니다.');
+            }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            showAlert('error', '오류', '서버 통신 중 오류가 발생했습니다.');
+        } finally {
+            setIsUserLoading(false);
+        }
+    };
+
     if (loading) return <div className="loading">로딩 중...</div>;
     if (!project) return null;
 
     const isOwner = project.owner.userId === currentUserId;
-    const getDomainName = (id) => DOMAINS.find(d => d.id === id)?.name || id;
-    const getPositionName = (id) => POSITIONS.find(p => p.id === id)?.name || '기타';
+    const getDomainName = (id) => DOMAINS.find(d => Number(d.id) === Number(id) || d.name === id || d.dbName === id)?.name || id;
+    
+    const getPositionObj = (id) => {
+        if (!id) return null;
+        // id가 객체로 넘어올 경우를 대비한 정제 로직
+        const realId = (id && typeof id === 'object' && !Array.isArray(id)) 
+            ? (id.id || id.positionId || id.position) 
+            : id;
+        
+        if (!realId) return null;
+
+        const numId = Number(realId);
+        const found = POSITIONS.find(p => 
+            p.id === numId || 
+            String(p.id) === String(realId) ||
+            (typeof realId === 'string' && (p.name === realId || p.dbName === realId))
+        );
+        
+        if (!found) {
+            console.warn(`Position mapping failed for ID:`, realId, "Raw Input:", id);
+        }
+        return found;
+    };
+
+    const getPositionName = (id) => getPositionObj(id)?.name || '기타';
+    const getPositionIcon = (id) => getPositionObj(id)?.icon || '👤';
+
+    const getSkillName = (id) => SKILLS.find(s => Number(s.id) === Number(id) || s.name === id)?.name || id;
 
     return (
         <div className="project-detail-page">
@@ -138,7 +429,7 @@ const ProjectDetailPage = () => {
                                 {isDetailsOpen ? <MdKeyboardArrowUp className="toggle-icon" /> : <MdKeyboardArrowDown className="toggle-icon" />}
                             </div>
                             <p className="project-meta">{project.startedAt} - {project.dueAt}</p>
-                            <p className="project-owner">{project.owner.nickname}~</p>
+                            <p className="project-description-summary">{project.description}</p>
                         </div>
                         <div className="header-right">
                             <div className="member-count-badge">
@@ -169,9 +460,13 @@ const ProjectDetailPage = () => {
                                 <p className="detail-label">참여자</p>
                                 <div className="member-cards-grid">
                                     {project.members.map(member => (
-                                        <div key={member.userId} className="member-small-card">
-                                            <span className="m-name">{member.nickname || '익명'}</span>
-                                            <span className="m-pos">{getPositionName(member.positionId)}</span>
+                                        <div 
+                                            key={member.userId} 
+                                            className="member-small-card clickable"
+                                            onClick={() => fetchUserProfile(member.userId)}
+                                        >
+                                            <span className="m-name">{member.nickname || member.name || '익명'}</span>
+                                            <span className="m-pos">{getPositionName(member.positionId || member.position)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -196,35 +491,79 @@ const ProjectDetailPage = () => {
                         </div>
                         <div className="sidebar-item"><MdSearch className="s-icon" /> 주제 검색</div>
                         <div className="sidebar-item"><MdBookmarkBorder className="s-icon" /> 북마크</div>
-                        <div className="sidebar-item"><MdHistory className="s-icon" /> 히스토리</div>
                     </aside>
 
                     <section className="recommend-main">
-                        <div className="recommend-header">
-                            <h2 className="recommend-title">{activeTab}</h2>
-                            <span className="recommend-count">6 / 30</span>
-                        </div>
-
-                        <div className="topic-grid">
-                            {recommendations.map(topic => (
-                                <div key={topic.topicId} className="topic-card">
-                                    <div className="topic-card-header">
-                                        <h3 className="topic-title">{topic.title}</h3>
-                                        {topic.bookmarked ? <MdBookmark className="bookmark-icon active" /> : <MdBookmarkBorder className="bookmark-icon" />}
-                                    </div>
-                                    <div className="topic-domain-tag">{topic.domainName}</div>
-                                    <div className="topic-footer">
-                                        <div className="topic-skills">
-                                            {topic.skills.map(s => <span key={s} className="t-skill-tag">{s}</span>)}
-                                        </div>
-                                    </div>
+                        {!selectedTopicId ? (
+                            <>
+                                <div className="recommend-header">
+                                    <h2 className="recommend-title">{activeTab}</h2>
+                                    <span className="recommend-count">
+                                        {recommendations.length > 0 
+                                            ? `${Math.min(visibleCount, recommendations.length)} / ${recommendations.length}` 
+                                            : '0 / 0'}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
-                        
-                        <div className="more-button-container">
-                            <button className="more-btn"><MdAdd className="btn-icon" /> 더보기</button>
-                        </div>
+
+                                <div className="topic-grid">
+                                        {recommendations.slice(0, visibleCount).map(topic => {
+                                            // 북마크 상태값의 타입(불리언, 문자열 등)에 관계없이 정확히 체크함
+                                            const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' || 
+                                                             topic.isBookmark === true || topic.isBookmark === 'true' || 
+                                                             topic.bookmarked === true || topic.bookmarked === 'true';
+                                            
+                                            return (
+                                                <div 
+                                                    key={topic.topicId} 
+                                                    className="topic-card clickable"
+                                                    onClick={() => setSelectedTopicId(topic.topicId)}
+                                                >
+                                                    <div className="topic-card-header">
+                                                        <h3 className="topic-title">{topic.title}</h3>
+                                                        <div 
+                                                            className="bookmark-btn-wrap" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleBookmarkToggle(topic.topicId);
+                                                            }}
+                                                        >
+                                                            {isMarked ? (
+                                                                <MdBookmark className="bookmark-icon active" style={{ color: '#ee7c62' }} />
+                                                            ) : (
+                                                                <MdBookmarkBorder className="bookmark-icon" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="topic-domain-tag">{getDomainName(topic.domainId)}</div>
+                                                    <div className="topic-footer">
+                                                        <div className="topic-skills">
+                                                            {topic.skills.map(s => <span key={s} className="t-skill-tag">{getSkillName(s)}</span>)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                                
+                                {recommendations.length > visibleCount && (
+                                    <div className="more-button-container">
+                                        <button className="more-btn" onClick={() => setVisibleCount(recommendations.length)}>
+                                            <MdAdd className="btn-icon" /> 더보기
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <TopicDetailView 
+                                topic={topicDetail} 
+                                isLoading={isTopicLoading}
+                                onBack={() => setSelectedTopicId(null)}
+                                onReaction={handleReaction}
+                                onBookmark={handleBookmarkToggle}
+                                getDomainName={getDomainName}
+                                getSkillName={getSkillName}
+                            />
+                        )}
                     </section>
                 </div>
 
@@ -237,6 +576,44 @@ const ProjectDetailPage = () => {
                     onConfirm={modal.onConfirm}
                     showCancel={modal.showCancel}
                 />
+
+                {/* 타 사용자 프로필 모달 */}
+                {isUserModalOpen && selectedUser && (
+                    <div className="modal-overlay" onClick={() => setIsUserModalOpen(false)}>
+                        <div className="user-profile-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="profile-header">
+                                <div className="profile-title-wrap">
+                                    <h2 className="profile-nickname">{selectedUser.nickname}</h2>
+                                </div>
+                                <button className="close-x-btn" onClick={() => setIsUserModalOpen(false)}>✕</button>
+                            </div>
+                            
+                            <div className="profile-body">
+                                {selectedUser.skillIds && selectedUser.skillIds.length > 0 && (
+                                    <div className="profile-info-group">
+                                        <p className="p-info-label">보유 기술 스택</p>
+                                        <div className="p-skill-tags">
+                                            {selectedUser.skillIds.map(id => (
+                                                <span key={id} className="p-skill-tag">{getSkillName(id)}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <button className="profile-close-btn" onClick={() => setIsUserModalOpen(false)}>확인</button>
+                        </div>
+                    </div>
+                )}
+
+                {isUserLoading && (
+                    <div className="modal-overlay">
+                        <div className="loading-spinner-wrap">
+                            <div className="loading-spinner"></div>
+                            <p>프로필을 불러오는 중...</p>
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
     );
