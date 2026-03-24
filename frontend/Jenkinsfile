@@ -4,21 +4,30 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
+        skipDefaultCheckout(true)
     }
 
     environment {
         APP_DIR = 'frontend'
         DOCKER_IMAGE = 'nnnnnara/tomato-frontend'
         DOCKER_TAG = "${env.BUILD_NUMBER}"
-        CONTAINER_NAME = 'tomato-frontend'
         DEPLOY_DIR = '/home/ubuntu/tomato'
         COMPOSE_FILE = 'docker-compose.prod.yml'
+        EC2_HOST = 'j14a508.p.ssafy.io'
+        EC2_USER = 'ubuntu'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                sh '''
+                    echo "=== repo root ==="
+                    pwd
+                    ls -al
+                    echo "=== frontend ==="
+                    ls -al ${APP_DIR}
+                '''
             }
         }
 
@@ -27,21 +36,9 @@ pipeline {
                 withCredentials([file(credentialsId: 'frontend-env-production', variable: 'ENV_FILE')]) {
                     sh '''
                         cp "$ENV_FILE" ${APP_DIR}/.env.production
+                        echo "=== frontend after env copy ==="
                         ls -al ${APP_DIR}
-                    '''
-                }
-            }
-        }
-
-        stage('Build Check') {
-            steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        docker run --rm \
-                          -v "$PWD":/app \
-                          -w /app \
-                          node:22-alpine \
-                          sh -c "npm ci && npm run build"
+                        test -f ${APP_DIR}/.env.production
                     '''
                 }
             }
@@ -73,9 +70,9 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sshagent(credentials: ['ec2-deploy-ssh']) {
+                sshagent(credentials: ['ec2-prod-ssh']) {
                     sh '''
-                        ssh -o StrictHostKeyChecking=no ubuntu@j14a508.p.ssafy.io "
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
                             cd ${DEPLOY_DIR} &&
                             export FRONTEND_IMAGE=${DOCKER_IMAGE}:${DOCKER_TAG} &&
                             docker compose -f ${COMPOSE_FILE} pull frontend &&
