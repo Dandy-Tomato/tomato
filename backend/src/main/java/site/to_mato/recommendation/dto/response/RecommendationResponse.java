@@ -11,7 +11,8 @@ public record RecommendationResponse(
         Integer difficulty,
         Long domainId,
         String domainName,
-        List<String> skills) {
+        List<Long> skills,
+        Boolean isBookmarked) {
 
     public static RecommendationResponse of(
             Long topicId,
@@ -22,7 +23,8 @@ public record RecommendationResponse(
             Integer difficulty,
             Long domainId,
             String domainName,
-            List<String> skills) {
+            List<Long> skills,
+            Boolean isBookmarked) {
         return new RecommendationResponse(
                 topicId,
                 title,
@@ -32,6 +34,7 @@ public record RecommendationResponse(
                 difficulty,
                 domainId,
                 domainName,
-                skills);
+                skills,
+                isBookmarked);
     }
 }
