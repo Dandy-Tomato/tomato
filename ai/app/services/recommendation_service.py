@@ -20,6 +20,7 @@ class RecommendationService:
         logger.info("[레포지토리 호출 시작]")
         
         topics = self.repository.find_topics(
+            project_id=request.project_id,
             preference_embedding=request.preference_embeddings,
             domain_ids=request.domain_ids,
             top_k=TOP_K
