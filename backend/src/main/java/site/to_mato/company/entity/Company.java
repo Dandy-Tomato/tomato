@@ -15,7 +15,6 @@ import site.to_mato.common.entity.BaseEntity;
 public class Company extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "company_id")
     private Long id;
 
