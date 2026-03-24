@@ -4,13 +4,13 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.FieldSetMapper;
-import org.springframework.batch.item.file.transform.FieldSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
-import site.to_mato.batch.entity.CompanySkillStaging;
 import site.to_mato.catalog.entity.Skill;
+
+import java.io.File;
 
 @Configuration
 public class SkillCsvReader {
@@ -18,11 +18,15 @@ public class SkillCsvReader {
     @Bean
     @StepScope
     public FlatFileItemReader<Skill> skillReader(
-            @Value("${batch.file.skill}") String filePath
+            @Value("${batch.file.root}") String rootPath,
+            @Value("${batch.file.skill}") String fileName,
+            @Value("#{jobParameters['date']}") String date
     ) {
+        String fullPath = rootPath + date + File.separator + fileName;
+
         return new FlatFileItemReaderBuilder<Skill>()
                 .name("skillReader")
-                .resource(new FileSystemResource(filePath))
+                .resource(new FileSystemResource(fullPath))
                 .delimited()
                 .names("skill_id", "front_name")
                 .fieldSetMapper(skillFieldSetMapper())

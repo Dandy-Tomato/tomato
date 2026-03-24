@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import site.to_mato.batch.entity.CompanyStaging;
 
+import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -19,11 +20,15 @@ public class CompanyCsvReader {
     @Bean
     @StepScope
     public FlatFileItemReader<CompanyStaging> companyStagingReader(
-            @Value("${batch.file.company}") String filePath
+            @Value("${batch.file.root}") String rootPath,
+            @Value("${batch.file.company}") String fileName,
+            @Value("#{jobParameters['date']}") String date
     ) {
+        String fullPath = rootPath + date + File.separator + fileName;
+
         return new FlatFileItemReaderBuilder<CompanyStaging>()
                 .name("companyStagingReader")
-                .resource(new FileSystemResource(filePath))
+                .resource(new FileSystemResource(fullPath))
                 .delimited()
                 .names("company_id", "name", "created_at", "updated_at", "domain_id")
                 .fieldSetMapper(companyFieldSetMapper())
