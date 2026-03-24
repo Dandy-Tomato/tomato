@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.project.entity.Project;
+import site.to_mato.project.entity.ProjectTopicReaction;
 import site.to_mato.project.repository.ProjectDomainRepository;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.project.repository.ProjectTopicBookmarkRepository;
@@ -80,7 +81,16 @@ public class RecommendationService {
 
         boolean isBookmarked = projectTopicBookmarkRepository.findByProject_IdAndTopic_Id(projectId, topicId).isPresent();
 
-        String isReaction = projectTopicReactionRepository.findByProject_IdAndTopic_Id(projectId, topicId).map(r -> r.getReaction().name()).orElse(null);
+        Optional<ProjectTopicReaction> reactionOpt =
+                projectTopicReactionRepository.findByProject_IdAndTopic_Id(projectId, topicId);
+
+        String isReaction = reactionOpt
+                .map(r -> r.getReaction().name())
+                .orElse(null);
+
+        Long reactionVersion = reactionOpt
+                .map(ProjectTopicReaction::getVersion)
+                .orElse(null);
 
         return RecommendationDetailResponse.of(
                 topic.getId(),
@@ -91,6 +101,8 @@ public class RecommendationService {
                 topic.getDomain().getId(),
                 skillIds,
                 isBookmarked,
-                isReaction);
+                isReaction,
+                reactionVersion
+        );
     }
 }

@@ -11,7 +11,9 @@ public record RecommendationDetailResponse(
         Long domainId,
         List<Long> skills,
         Boolean isBookmarked,
-        String isReaction) {
+        String isReaction,
+        Long reactionVersion
+) {
 
     public static RecommendationDetailResponse of(
             Long topicId,
@@ -22,7 +24,8 @@ public record RecommendationDetailResponse(
             Long domainId,
             List<Long> skills,
             Boolean isBookmarked,
-            String isReaction) {
+            String isReaction,
+            Long reactionVersion) {
         return new RecommendationDetailResponse(
                 topicId,
                 title,
@@ -32,6 +35,7 @@ public record RecommendationDetailResponse(
                 domainId,
                 skills,
                 isBookmarked,
-                isReaction);
+                isReaction,
+                reactionVersion);
     }
 }
