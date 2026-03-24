@@ -11,6 +11,7 @@ import org.springframework.core.io.FileSystemResource;
 import site.to_mato.batch.entity.CompanyStaging;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -21,9 +22,9 @@ public class CompanyCsvReader {
     @StepScope
     public FlatFileItemReader<CompanyStaging> companyStagingReader(
             @Value("${batch.file.root}") String rootPath,
-            @Value("${batch.file.company}") String fileName,
-            @Value("#{jobParameters['date']}") String date
+            @Value("${batch.file.company}") String fileName
     ) {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
         String fullPath = rootPath + date + File.separator + fileName;
 
         return new FlatFileItemReaderBuilder<CompanyStaging>()

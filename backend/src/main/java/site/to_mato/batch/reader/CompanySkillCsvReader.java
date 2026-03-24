@@ -11,6 +11,8 @@ import org.springframework.core.io.FileSystemResource;
 import site.to_mato.batch.entity.CompanySkillStaging;
 
 import java.io.File;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Configuration
 public class CompanySkillCsvReader {
@@ -19,9 +21,9 @@ public class CompanySkillCsvReader {
     @StepScope
     public FlatFileItemReader<CompanySkillStaging> companySkillStagingReader(
             @Value("${batch.file.root}") String rootPath,
-            @Value("${batch.file.company}") String fileName,
-            @Value("#{jobParameters['date']}") String date
+            @Value("${batch.file.company-skill}") String fileName
     ) {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
         String fullPath = rootPath + date + File.separator + fileName;
 
         return new FlatFileItemReaderBuilder<CompanySkillStaging>()
