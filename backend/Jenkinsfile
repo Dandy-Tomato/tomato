@@ -1,65 +1,3 @@
-// pipeline {
-//     agent any
-
-//     stages {
-//         stage('Inject application.yml') {
-//             steps {
-//                 withCredentials([file(credentialsId: 'backend-application-yml', variable: 'APP_YML')]) {
-//                     dir('backend') {
-//                         sh '''
-//                             echo "[INFO] Inject application.yml"
-//                             mkdir -p src/main/resources
-//                             cp "$APP_YML" src/main/resources/application.yml
-//                             ls -al src/main/resources
-//                         '''
-//                     }
-//                 }
-//             }
-//         }
-
-//         stage('Build Backend') {
-//             steps {
-//                 dir('backend') {
-//                     sh '''
-//                         echo "[INFO] Setup JDK 17"
-//                         export JAVA_HOME=/opt/jdk17
-//                         export PATH=$JAVA_HOME/bin:$PATH
-
-//                         echo "[INFO] Configure Gradle toolchain"
-//                         mkdir -p ~/.gradle
-//                         echo "org.gradle.java.installations.paths=/opt/jdk17" > ~/.gradle/gradle.properties
-
-//                         echo "[INFO] Start Gradle build"
-//                         chmod +x gradlew
-//                         ./gradlew clean build -x test --no-daemon
-//                     '''
-//                     // mkdir -p ~/.gradle : 필요한 부모 디렉토리에서 만들어서
-//                     // echo "org.gradle.java.installations.path=/opt/jdk17" > ~/.gradle/gradle.properties
-//                     // ㄴ 자바 17을 사용하기 위해
-//                 }
-//             }
-//         }
-//     }
-
-//     post {
-//         always {
-//             dir('backend') {
-
-//                 sh '''
-//                     echo "[INFO] Clean up injected application.yml"
-//                     rm -f src/main/resources/application.yml || true
-//                 '''
-//             }
-//         }
-//         success {
-//             echo 'Backend build succeeded.'
-//         }
-//         failure {
-//             echo 'Backend build failed.'
-//         }
-//     }
-// }
-
 import groovy.json.JsonOutput
 
 /*
@@ -148,21 +86,6 @@ def resolvePusherMention() {
  *
  * success = true  -> 성공 알림
  * success = false -> 실패 알림
- *
- * info:
- * - mention
- * - branch
- * - buildUrl
- * - image
- * - server
- * - stage
- * - commit.msg
- * - commit.url
- * - details
- *
- * 참고:
- * - webhook 전송 실패가 전체 pipeline 실패로 이어지지 않게 `|| true` 처리
- * - payload는 JSON 파일로 만든 뒤 curl로 전송
  */
 def sendMMNotify(boolean success, Map info) {
     def titleLine = success
@@ -204,7 +127,6 @@ def sendMMNotify(boolean success, Map info) {
 
     def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
 
-    // Mattermost로 보낼 payload 생성
     writeFile(
         file: 'payload.json',
         text: JsonOutput.toJson([
@@ -329,7 +251,6 @@ pipeline {
                 script {
                     markStage('Collect Build Metadata')
 
-                    // Mattermost 알림에서 쓸 메타데이터를 미리 수집
                     env.PIPELINE_BRANCH = detectBranch()
 
                     env.PIPELINE_COMMIT_SHA = sh(
@@ -473,6 +394,9 @@ REMOTE_SCRIPT
         }
 
         stage('Verify Deployment') {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
             steps {
                 script {
                     markStage('Verify Deployment')
@@ -488,11 +412,25 @@ echo '[INFO] Compose status'
 docker compose --env-file .env -f ${COMPOSE_FILE} ps
 
 echo '[INFO] Wait for application startup'
-sleep 10
+MAX_RETRIES=24
+SLEEP_SECONDS=5
+COUNT=1
+TOTAL_WAIT=\$((MAX_RETRIES * SLEEP_SECONDS))
 
-echo '[INFO] Health check'
-curl -fsS ${HEALTHCHECK_URL}
+until curl -fsS ${HEALTHCHECK_URL}; do
+  if [ \$COUNT -ge \$MAX_RETRIES ]; then
+    echo "[ERROR] Health check failed after \${TOTAL_WAIT} seconds"
+    echo '[INFO] Backend recent logs'
+    docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=200 backend
+    exit 1
+  fi
 
+  echo "[INFO] Health check failed. Retry \${COUNT}/\${MAX_RETRIES} after \${SLEEP_SECONDS}s..."
+  COUNT=\$((COUNT + 1))
+  sleep \${SLEEP_SECONDS}
+done
+
+echo '[INFO] Health check passed'
 echo '[INFO] Backend recent logs'
 docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=100 backend
 REMOTE_SCRIPT
@@ -505,9 +443,6 @@ REMOTE_SCRIPT
     post {
         success {
             script {
-                /*
-                 * 성공 시 Mattermost로 보내는 정보
-                 */
                 def buildInfo = [
                     mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
                     branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
@@ -528,10 +463,6 @@ REMOTE_SCRIPT
 
         failure {
             script {
-                /*
-                 * 실패 시 Mattermost로 보내는 정보
-                 * 마지막 수행 단계와 빌드 링크를 보내서 Mattermost에서 보고 바로 Jenkins 콘솔로 들어가도록 유도
-                 */
                 def buildInfo = [
                     mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
                     branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
