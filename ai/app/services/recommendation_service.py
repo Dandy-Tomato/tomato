@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-TOP_K = 20
+TOP_K = 21
 
 class RecommendationService:
 

@@ -45,13 +45,12 @@ public class RecommendationService {
     // 프로젝트 별 추천 주제 조회
     public List<RecommendationResponse> getRecommendationsByProjectId(Long projectId) {
 
-        Project project = projectRepository.findById(projectId).orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROJECT_NOT_FOUND));
 
-        log.info("[프로젝트 조회 완료] projectId={}", projectId);  // 추가
-
-        List<Long> domainIds = projectDomainRepository.findByProjectId(projectId).stream().map(projectDomain -> projectDomain.getDomain().getId()).toList();
-
-        log.info("[도메인 조회 완료] domainIds={}", domainIds);  // 추가
+        List<Long> domainIds = projectDomainRepository.findByProjectId(projectId).stream()
+                .map(projectDomain -> projectDomain.getDomain().getId())
+                .toList();
 
         List<Float> preferenceEmbedding = null;
         Optional<String> embeddingStr = projectRepository.findPreferenceEmbeddingById(projectId);
@@ -70,7 +69,26 @@ public class RecommendationService {
 
         RecommendationApiResponse apiResponse = recommendationClient.getRecommendations(request);
 
-        return apiResponse.data();
+        return apiResponse.data().stream()
+                .map(item -> {
+                    boolean isBookmarked = projectTopicBookmarkRepository
+                            .findByProject_IdAndTopic_Id(projectId, item.topicId())
+                            .isPresent();
+
+                    return RecommendationResponse.of(
+                            item.topicId(),
+                            item.title(),
+                            item.description(),
+                            item.expectedDurationWeek(),
+                            item.recommendedTeamSize(),
+                            item.difficulty(),
+                            item.domainId(),
+                            item.domainName(),
+                            item.skills(),
+                            isBookmarked
+                    );
+                })
+                .toList();
     }
 
     public RecommendationDetailResponse getRecommendationDetail(Long projectId, Long topicId) {
