@@ -10,15 +10,39 @@ import {
     MdArrowBack, MdRefresh, MdLightbulbOutline
 } from 'react-icons/md';
 import AlertModal from './components/AlertModal';
+import ReactMarkdown from 'react-markdown';
+
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 // 주제 상세 보기 컴포넌트
-const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, getDomainName, getSkillName }) => {
+const TopicDetailView = ({
+    topic,
+    isLoading,
+    onBack,
+    onReaction,
+    onBookmark,
+    getDomainName,
+    getSkillName,
+    onRefine,
+    isRefined, // state from parent if needed, but we use topic.childTopics
+    isRefining,
+    confirmedChildTopicId,
+    onConfirmTopic,
+    onUnconfirmTopic,
+    isOwner
+}) => {
+    const [expandedChildId, setExpandedChildId] = useState(null);
+
     if (isLoading || !topic) return <div className="topic-detail-loading">데이터를 불러오는 중...</div>;
+
     const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' ||
         topic.isBookmark === true || topic.isBookmark === 'true' ||
         topic.bookmarked === true || topic.bookmarked === 'true';
+
+    const toggleChild = (id) => {
+        setExpandedChildId(expandedChildId === id ? null : id);
+    };
 
     return (
         <div className="topic-detail-view">
@@ -61,14 +85,14 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
                 <div className="topic-metadata-grid">
                     <div className="metadata-item">
                         <span className="meta-label">예상 개발 기간</span>
-                        <div className="meta-value-wrap">
+                        <div className="metadata-value-wrap">
                             <span className="meta-icon">📅</span>
                             <span className="meta-value">{topic.expectedDurationWeek || 0}주</span>
                         </div>
                     </div>
                     <div className="metadata-item">
                         <span className="meta-label">추천 팀원 수</span>
-                        <div className="meta-value-wrap">
+                        <div className="metadata-value-wrap">
                             <span className="meta-icon">👥</span>
                             <span className="meta-value">{topic.recommendedTeamSize || 0}명</span>
                         </div>
@@ -83,61 +107,77 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
                     <button className="back-to-list-btn" onClick={onBack}>
                         <MdArrowBack className="btn-icon" /> 목록으로
                     </button>
-                    <button className="elaborate-btn" onClick={() => {/* 구체화 API 연동 예정 */ }}>
-                        <MdAutoAwesome className="btn-icon" /> 구체화하기
+                    <button
+                        className="elaborate-btn"
+                        onClick={() => onRefine(topic.topicId)}
+                        disabled={isRefining}
+                    >
+                        <MdAutoAwesome className="btn-icon" /> {isRefining ? '생성 중...' : '구체화하기'}
                     </button>
                 </div>
             </div>
 
-            {/* 구체화 결과 섹션 (데이터가 있을 경우에만 표시) */}
-            {topic.elaboration && (
+            {/* 구체화 결과 섹션 (childTopics 데이터가 있을 경우 표시) */}
+            {topic.childTopics && topic.childTopics.length > 0 && (
                 <div className="elaboration-section">
                     <div className="elab-badge-row">
-                        <span className="elab-status-badge"><MdAutoAwesome /> 구체화 완료</span>
+                        <span className="elab-status-badge"><MdAutoAwesome /> 구체화 목록</span>
                     </div>
-                    <h2 className="elab-title">{topic.elaboration.title}</h2>
-                    <p className="elab-subtitle">{topic.elaboration.subtitle}</p>
 
-                    <div className="elab-group">
-                        <h3 className="elab-group-label">핵심 기능</h3>
-                        <div className="feature-list">
-                            {topic.elaboration.features.map((feature, index) => (
-                                <div key={index} className="feature-item">
-                                    <div className="feature-num">{index + 1}</div>
-                                    <div className="feature-content">
-                                        <h4 className="f-title">{feature.title}</h4>
-                                        <p className="f-desc">{feature.description}</p>
+                    <div className="child-topics-list">
+                        {topic.childTopics.map((child) => {
+                            const isConfirmed = Number(child.childTopicId) === Number(confirmedChildTopicId);
+
+                            return (
+                                <div key={child.childTopicId} className={`child-topic-item ${expandedChildId === child.childTopicId ? 'expanded' : ''} ${isConfirmed ? 'confirmed' : ''}`}>
+                                    <div
+                                        className="child-topic-header"
+                                        onClick={() => toggleChild(child.childTopicId)}
+                                    >
+                                        <div className="child-topic-title-wrap">
+                                            <h3 className="child-topic-title">{child.title}</h3>
+                                            {isConfirmed && <span className="confirmed-badge">확정됨</span>}
+                                        </div>
+                                        <div className="child-topic-actions">
+                                            {isOwner && (
+                                                isConfirmed ? (
+                                                    <button
+                                                        className="unconfirm-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onUnconfirmTopic();
+                                                        }}
+                                                    >
+                                                        확정 해제
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        className="confirm-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onConfirmTopic(child.childTopicId);
+                                                        }}
+                                                    >
+                                                        주제 확정
+                                                    </button>
+                                                )
+                                            )}
+                                            {expandedChildId === child.childTopicId ? <MdKeyboardArrowUp /> : <MdKeyboardArrowDown />}
+                                        </div>
                                     </div>
+                                    {expandedChildId === child.childTopicId && (
+                                        <div className="child-topic-content markdown-body">
+                                            <ReactMarkdown>{child.content}</ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="elab-group">
-                        <h3 className="elab-group-label">추천 기술스택</h3>
-                        <div className="elab-skill-tags">
-                            {topic.elaboration.techStack.map(skill => (
-                                <span key={skill} className="e-skill-tag">{skill}</span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="elab-group">
-                        <h3 className="elab-group-label">차별화 포인트</h3>
-                        <div className="differentiation-card">
-                            <MdLightbulbOutline className="diff-icon" />
-                            <p className="diff-text">{topic.elaboration.differentiation}</p>
-                        </div>
+                            );
+                        })}
                     </div>
 
                     <div className="elab-footer">
-                        <div className="difficulty-display">
-                            <span className="diff-label-text">
-                                추천 기간 {topic.elaboration.durationRange}
-                            </span>
-                        </div>
-                        <button className="re-elaborate-btn">
-                            <MdRefresh className="btn-icon" /> 다시 구체화
+                        <button className="re-elaborate-btn" onClick={() => onRefine(topic.topicId)} disabled={isRefining}>
+                            <MdRefresh className="btn-icon" /> {isRefining ? '생성 중...' : '추가 구체화'}
                         </button>
                     </div>
                 </div>
@@ -145,6 +185,7 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
         </div>
     );
 };
+
 
 const ProjectDetailPage = () => {
     const { projectId } = useParams();
@@ -163,6 +204,8 @@ const ProjectDetailPage = () => {
         } catch { return new Set(); }
     });
     const [isTopicLoading, setIsTopicLoading] = useState(false);
+    const [isRefining, setIsRefining] = useState(false);
+
     const [modal, setModal] = useState({
         isOpen: false,
         type: 'success',
@@ -179,6 +222,21 @@ const ProjectDetailPage = () => {
 
     const showAlert = (type, title, message, onConfirm = null, showCancel = false) => {
         setModal({ isOpen: true, type, title, message, onConfirm, showCancel });
+    };
+
+    // 브라우저 뒤로가기 버튼으로 주제 상세 화면을 빠져나올 수 있도록 popstate 처리
+    useEffect(() => {
+        const handlePopState = () => {
+            setSelectedTopicId(null);
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
+    // 주제 상세 화면으로 진입 시 dummy hash를 pushState하여 history 스택에 로컬 움직임을 저장
+    const openTopicDetail = (topicId) => {
+        window.history.pushState({ topicDetail: true }, '');
+        setSelectedTopicId(topicId);
     };
 
     const currentUserId = Number(localStorage.getItem('userId'));
@@ -307,7 +365,98 @@ const ProjectDetailPage = () => {
         }
     };
 
+    const handleRefine = async (topicId) => {
+        setIsRefining(true);
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/refine/${topicId}`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.status === 400) {
+                showAlert('error', '입력 오류', '입력값 유효성 검증에 실패했습니다.');
+                return;
+            } else if (response.status === 409) {
+                showAlert('error', '중복 오류', '이미 구체화된 요청이거나 중복 데이터가 존재합니다.');
+                return;
+            }
+
+            const result = await response.json();
+            if (response.ok && result.data) {
+                // 기존 childTopics에 새로 생성된 childTopic 추가
+                setTopicDetail(prev => ({
+                    ...prev,
+                    childTopics: [result.data, ...(prev.childTopics || [])]
+                }));
+                showAlert('success', '구체화 완료', 'AI가 주제를 구체화했습니다. 목록에서 확인해 보세요!');
+            } else {
+                showAlert('error', '오류', '주제 구체화에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error("Error refining topic:", error);
+            showAlert('error', '오류', '서버 통신 중 오류가 발생했습니다.');
+        } finally {
+            setIsRefining(false);
+        }
+    };
+
+    const handleConfirmTopic = async (childTopicId) => {
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/confirmed-topic`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ childTopicId })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                // 프로젝트 상태 업데이트
+                setProject(prev => ({
+                    ...prev,
+                    confirmedChildTopicId: result.data.confirmedChildTopicId
+                }));
+                showAlert('success', '주제 확정', '주제가 프로젝트의 최종 테마로 확정되었습니다!');
+            } else {
+                showAlert('error', '오류', '주제 확정에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error("Error confirming topic:", error);
+            showAlert('error', '오류', '서버 통신 중 오류가 발생했습니다.');
+        }
+    };
+
+    const handleUnconfirmTopic = async () => {
+        const token = localStorage.getItem("accessToken");
+        try {
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/confirmed-topic`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                // 프로젝트 상태 업데이트
+                setProject(prev => ({
+                    ...prev,
+                    confirmedChildTopicId: null
+                }));
+                showAlert('info', '확정 해제', '주제 확정이 해제되었습니다.');
+            } else {
+                showAlert('error', '오류', '주제 확정 해제에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error("Error unconfirming topic:", error);
+            showAlert('error', '오류', '서버 통신 중 오류가 발생했습니다.');
+        }
+    };
+
     const handleReaction = async (topicId, reactionType) => {
+
+
         if (window.isReactionPending) return; // 연속 클릭 방지
         const token = localStorage.getItem("accessToken");
         if (!token) return;
@@ -586,12 +735,6 @@ const ProjectDetailPage = () => {
                             <MdAutoAwesome className="s-icon" /> 추천 주제
                         </div>
                         <div
-                            className={`sidebar-item ${activeTab === '주제 검색' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('주제 검색'); setSelectedTopicId(null); }}
-                        >
-                            <MdSearch className="s-icon" /> 주제 검색
-                        </div>
-                        <div
                             className={`sidebar-item ${activeTab === '북마크' ? 'active' : ''}`}
                             onClick={() => { setActiveTab('북마크'); setSelectedTopicId(null); }}
                         >
@@ -634,7 +777,7 @@ const ProjectDetailPage = () => {
                                                         <div
                                                             key={topic.topicId}
                                                             className="topic-card clickable"
-                                                            onClick={() => setSelectedTopicId(topic.topicId)}
+                                                            onClick={() => openTopicDetail(topic.topicId)}
                                                         >
                                                             <div className="topic-card-header">
                                                                 <h3 className="topic-title">{topic.title}</h3>
@@ -688,7 +831,16 @@ const ProjectDetailPage = () => {
                                 onBookmark={handleBookmarkToggle}
                                 getDomainName={getDomainName}
                                 getSkillName={getSkillName}
+                                onRefine={handleRefine}
+                                isRefining={isRefining}
+                                confirmedChildTopicId={project.confirmedChildTopicId}
+                                onConfirmTopic={handleConfirmTopic}
+                                onUnconfirmTopic={handleUnconfirmTopic}
+                                isOwner={isOwner}
                             />
+
+
+
                         )}
                     </section>
                 </div>
