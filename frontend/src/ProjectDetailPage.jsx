@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import './ProjectDetailPage.css';
 import { SKILLS, DOMAINS, POSITIONS } from './constants';
-import { 
+import {
     MdEdit, MdContentCopy, MdKeyboardArrowDown, MdKeyboardArrowUp,
     MdAutoAwesome, MdSearch, MdBookmarkBorder, MdBookmark,
     MdAdd, MdPeopleOutline, MdPersonAdd, MdThumbUp, MdThumbDown,
@@ -16,9 +16,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 // 주제 상세 보기 컴포넌트
 const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, getDomainName, getSkillName }) => {
     if (isLoading || !topic) return <div className="topic-detail-loading">데이터를 불러오는 중...</div>;
-    const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' || 
-                     topic.isBookmark === true || topic.isBookmark === 'true' || 
-                     topic.bookmarked === true || topic.bookmarked === 'true';
+    const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' ||
+        topic.isBookmark === true || topic.isBookmark === 'true' ||
+        topic.bookmarked === true || topic.bookmarked === 'true';
 
     return (
         <div className="topic-detail-view">
@@ -27,19 +27,19 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
                 <div className="topic-header-top">
                     <span className="topic-domain-badge">{getDomainName(topic.domainId)}</span>
                     <div className="topic-actions">
-                        <button 
+                        <button
                             className={`topic-action-btn ${topic.isReaction === 'LIKE' ? 'active' : ''}`}
                             onClick={() => onReaction(topic.topicId, 'LIKE')}
                         >
                             <MdThumbUp />
                         </button>
-                        <button 
+                        <button
                             className={`topic-action-btn ${topic.isReaction === 'DISLIKE' ? 'active' : ''}`}
                             onClick={() => onReaction(topic.topicId, 'DISLIKE')}
                         >
                             <MdThumbDown />
                         </button>
-                        <button 
+                        <button
                             className={`topic-action-btn bookmark ${isMarked ? 'active' : ''}`}
                             onClick={() => onBookmark(topic.topicId)}
                         >
@@ -49,7 +49,7 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
                 </div>
 
                 <h1 className="topic-detail-title">{topic.title}</h1>
-                
+
                 <div className="topic-detail-skills">
                     {topic.skills.map(id => (
                         <span key={id} className="td-skill-tag">{getSkillName(id)}</span>
@@ -83,7 +83,7 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
                     <button className="back-to-list-btn" onClick={onBack}>
                         <MdArrowBack className="btn-icon" /> 목록으로
                     </button>
-                    <button className="elaborate-btn" onClick={() => {/* 구체화 API 연동 예정 */}}>
+                    <button className="elaborate-btn" onClick={() => {/* 구체화 API 연동 예정 */ }}>
                         <MdAutoAwesome className="btn-icon" /> 구체화하기
                     </button>
                 </div>
@@ -154,9 +154,14 @@ const ProjectDetailPage = () => {
     const [isDetailsOpen, setIsDetailsOpen] = useState(true);
     const [activeTab, setActiveTab] = useState('추천 주제');
     const [recommendations, setRecommendations] = useState([]);
-    const [visibleCount, setVisibleCount] = useState(6);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [selectedTopicId, setSelectedTopicId] = useState(null);
     const [topicDetail, setTopicDetail] = useState(null);
+    const [localBookmarks, setLocalBookmarks] = useState(() => {
+        try {
+            return new Set(JSON.parse(localStorage.getItem('local_bookmarks') || '[]'));
+        } catch { return new Set(); }
+    });
     const [isTopicLoading, setIsTopicLoading] = useState(false);
     const [modal, setModal] = useState({
         isOpen: false,
@@ -166,7 +171,7 @@ const ProjectDetailPage = () => {
         onConfirm: null,
         showCancel: false
     });
-    
+
     // 타 사용자 프로필 모달 상태
     const [selectedUser, setSelectedUser] = useState(null);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -212,23 +217,53 @@ const ProjectDetailPage = () => {
         }
     };
 
-    const fetchRecommendations = async () => {
+    const fetchRecommendations = async (isLoadMore = false) => {
+        if (isLoadMore) setIsFetchingMore(true);
+
         const token = localStorage.getItem("accessToken");
         try {
+            // 단순 GET 요청을 반복 호출하면 새로운 추천 주제를 계속 받아오도록 무한 스크롤 형태 전송
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/recommendations`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+
+            // 추가: 상세 조회와 동일하게 403, 404, 500 에러 처리
+            if (response.status === 403) {
+                showAlert('error', '권한 없음', '해당 프로젝트에 접근 권한이 없습니다.', () => navigate('/main'));
+                if (isLoadMore) setIsFetchingMore(false);
+                return;
+            } else if (response.status === 404) {
+                showAlert('error', '오류', '프로젝트를 찾을 수 없습니다.', () => navigate('/main'));
+                if (isLoadMore) setIsFetchingMore(false);
+                return;
+            } else if (response.status === 500) {
+                showAlert('error', '서버 오류', '추천 서버 호출에 실패했습니다.');
+                if (isLoadMore) setIsFetchingMore(false);
+                return;
+            }
+
             const result = await response.json();
             console.log("Recommendations List API Result:", result);
-            
+
             if (response.ok && result.data) {
-                const dataArray = Array.isArray(result.data) 
-                    ? result.data 
+                const dataArray = Array.isArray(result.data)
+                    ? result.data
                     : (result.data.content || []);
-                setRecommendations(dataArray);
+
+                if (isLoadMore) {
+                    setRecommendations(prev => {
+                        const existingIds = new Set(prev.map(t => t.topicId));
+                        const uniqueNew = dataArray.filter(t => !existingIds.has(t.topicId));
+                        return [...prev, ...uniqueNew];
+                    });
+                } else {
+                    setRecommendations(dataArray);
+                }
             }
         } catch (error) {
             console.error("Error fetching recommendations:", error);
+        } finally {
+            if (isLoadMore) setIsFetchingMore(false);
         }
     };
 
@@ -239,7 +274,7 @@ const ProjectDetailPage = () => {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/recommendations/${topicId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            
+
             if (response.status === 403) {
                 showAlert('error', '권한 없음', '해당 프로젝트에 접근 권한이 없습니다.');
                 setSelectedTopicId(null);
@@ -281,11 +316,11 @@ const ProjectDetailPage = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/topics/${topicId}/reaction`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     reaction: reactionType,
                     // 기존 데이터가 없는 상태(초기 생성)일 때는 무조건 null을 전달
                     version: topicDetail?.isReaction ? (topicDetail?.reactionVersion ?? null) : null
@@ -301,7 +336,7 @@ const ProjectDetailPage = () => {
                     reactionVersion: result.data.reactionVersion
                 }));
                 // 목록도 갱신
-                setRecommendations(prev => prev.map(t => 
+                setRecommendations(prev => prev.map(t =>
                     t.topicId === topicId ? { ...t, isReaction: result.data.isReaction } : t
                 ));
             } else if (response.status === 409) {
@@ -333,7 +368,7 @@ const ProjectDetailPage = () => {
 
             if (response.ok) {
                 const result = await response.json();
-                
+
                 // 백엔드 API 응답 구조가 Boolean인지 Object인지 판별, 못 찾으면 기존 상태의 무조건 반대값 토글 적용
                 let newStatus;
                 if (typeof result.data === 'boolean') {
@@ -345,9 +380,9 @@ const ProjectDetailPage = () => {
                     const isCurrentlyMarked = currentTopic?.isBookmarked === true || currentTopic?.isBookmarked === 'true' || currentTopic?.isBookmark === true;
                     newStatus = !isCurrentlyMarked;
                 }
-                
+
                 // 목록 상태 즉시 업데이트
-                setRecommendations(prev => prev.map(t => 
+                setRecommendations(prev => prev.map(t =>
                     t.topicId === topicId ? { ...t, isBookmarked: newStatus } : t
                 ));
 
@@ -358,6 +393,15 @@ const ProjectDetailPage = () => {
                         isBookmarked: newStatus
                     }));
                 }
+
+                // API 응답 누락 대비 브라우저 캐시에 북마크 상태 강제 저장
+                setLocalBookmarks(prev => {
+                    const next = new Set(prev);
+                    if (newStatus) next.add(topicId);
+                    else next.delete(topicId);
+                    localStorage.setItem('local_bookmarks', JSON.stringify([...next]));
+                    return next;
+                });
             } else {
                 showAlert('error', '오류', '북마크 처리에 실패했습니다.');
             }
@@ -400,7 +444,7 @@ const ProjectDetailPage = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const result = await response.json();
-            
+
             if (response.ok) {
                 showAlert('success', '탈퇴 완료', "프로젝트에서 성공적으로 나갔습니다.", () => navigate('/main'));
             } else {
@@ -439,23 +483,23 @@ const ProjectDetailPage = () => {
 
     const isOwner = project.owner.userId === currentUserId;
     const getDomainName = (id) => DOMAINS.find(d => Number(d.id) === Number(id) || d.name === id || d.dbName === id)?.name || id;
-    
+
     const getPositionObj = (id) => {
         if (!id) return null;
         // id가 객체로 넘어올 경우를 대비한 정제 로직
-        const realId = (id && typeof id === 'object' && !Array.isArray(id)) 
-            ? (id.id || id.positionId || id.position) 
+        const realId = (id && typeof id === 'object' && !Array.isArray(id))
+            ? (id.id || id.positionId || id.position)
             : id;
-        
+
         if (!realId) return null;
 
         const numId = Number(realId);
-        const found = POSITIONS.find(p => 
-            p.id === numId || 
+        const found = POSITIONS.find(p =>
+            p.id === numId ||
             String(p.id) === String(realId) ||
             (typeof realId === 'string' && (p.name === realId || p.dbName === realId))
         );
-        
+
         if (!found) {
             console.warn(`Position mapping failed for ID:`, realId, "Raw Input:", id);
         }
@@ -471,7 +515,7 @@ const ProjectDetailPage = () => {
         <div className="project-detail-page">
             <Navbar />
             <main className="project-detail-content">
-                
+
                 {/* 프로젝트 헤더 카드 */}
                 <div className="project-header-card">
                     <div className="header-main">
@@ -512,8 +556,8 @@ const ProjectDetailPage = () => {
                                 <p className="detail-label">참여자</p>
                                 <div className="member-cards-grid">
                                     {project.members.map(member => (
-                                        <div 
-                                            key={member.userId} 
+                                        <div
+                                            key={member.userId}
                                             className="member-small-card clickable"
                                             onClick={() => fetchUserProfile(member.userId)}
                                         >
@@ -535,21 +579,21 @@ const ProjectDetailPage = () => {
                 {/* 추천 주제 섹션 */}
                 <div className="recommend-container">
                     <aside className="recommend-sidebar">
-                        <div 
+                        <div
                             className={`sidebar-item ${activeTab === '추천 주제' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('추천 주제'); setSelectedTopicId(null); setVisibleCount(6); }}
+                            onClick={() => { setActiveTab('추천 주제'); setSelectedTopicId(null); }}
                         >
                             <MdAutoAwesome className="s-icon" /> 추천 주제
                         </div>
-                        <div 
+                        <div
                             className={`sidebar-item ${activeTab === '주제 검색' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('주제 검색'); setSelectedTopicId(null); setVisibleCount(6); }}
+                            onClick={() => { setActiveTab('주제 검색'); setSelectedTopicId(null); }}
                         >
                             <MdSearch className="s-icon" /> 주제 검색
                         </div>
-                        <div 
+                        <div
                             className={`sidebar-item ${activeTab === '북마크' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('북마크'); setSelectedTopicId(null); setVisibleCount(6); }}
+                            onClick={() => { setActiveTab('북마크'); setSelectedTopicId(null); }}
                         >
                             <MdBookmarkBorder className="s-icon" /> 북마크
                         </div>
@@ -558,11 +602,16 @@ const ProjectDetailPage = () => {
                     <section className="recommend-main">
                         {!selectedTopicId ? (
                             (() => {
-                                // 북마크 여부 확인 유틸 함수
-                                const isMarkedTopic = (t) => t.isBookmarked === true || t.isBookmarked === 'true' || t.isBookmark === true || t.isBookmark === 'true' || t.bookmarked === true || t.bookmarked === 'true';
-                                
+                                // 북마크 여부 확인 유틸 함수 (서버 값 다양성 + 로컬 스토리지 백업)
+                                const isMarkedTopic = (t) => {
+                                    if (!t) return false;
+                                    const b = t.isBookmarked ?? t.isBookmark ?? t.bookmarked;
+                                    const isServerMarked = b === true || b === 'true' || String(b).toLowerCase() === 'y' || b === 1;
+                                    return isServerMarked || localBookmarks.has(t.topicId);
+                                };
+
                                 // 현재 탭 상태에 따라 보여줄 목록 필터링
-                                const displayRecommendations = activeTab === '북마크' 
+                                const displayRecommendations = activeTab === '북마크'
                                     ? recommendations.filter(isMarkedTopic)
                                     : recommendations;
 
@@ -570,11 +619,6 @@ const ProjectDetailPage = () => {
                                     <>
                                         <div className="recommend-header">
                                             <h2 className="recommend-title">{activeTab}</h2>
-                                            <span className="recommend-count">
-                                                {displayRecommendations.length > 0 
-                                                    ? `${Math.min(visibleCount, displayRecommendations.length)} / ${displayRecommendations.length}` 
-                                                    : '0 / 0'}
-                                            </span>
                                         </div>
 
                                         {displayRecommendations.length === 0 ? (
@@ -583,19 +627,19 @@ const ProjectDetailPage = () => {
                                             </div>
                                         ) : (
                                             <div className="topic-grid">
-                                                {displayRecommendations.slice(0, visibleCount).map(topic => {
+                                                {displayRecommendations.map(topic => {
                                                     const isMarked = isMarkedTopic(topic);
-                                                    
+
                                                     return (
-                                                        <div 
-                                                            key={topic.topicId} 
+                                                        <div
+                                                            key={topic.topicId}
                                                             className="topic-card clickable"
                                                             onClick={() => setSelectedTopicId(topic.topicId)}
                                                         >
                                                             <div className="topic-card-header">
                                                                 <h3 className="topic-title">{topic.title}</h3>
-                                                                <div 
-                                                                    className="bookmark-btn-wrap" 
+                                                                <div
+                                                                    className="bookmark-btn-wrap"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleBookmarkToggle(topic.topicId);
@@ -619,11 +663,16 @@ const ProjectDetailPage = () => {
                                                 })}
                                             </div>
                                         )}
-                                        
-                                        {displayRecommendations.length > visibleCount && (
+
+                                        {/* 북마크 탭이 아닌 추천 탭일 때 계속해서 서버에 더보기를 요청 (새로고침) */}
+                                        {activeTab !== '북마크' && (
                                             <div className="more-button-container">
-                                                <button className="more-btn" onClick={() => setVisibleCount(displayRecommendations.length)}>
-                                                    <MdAdd className="btn-icon" /> 더보기
+                                                <button
+                                                    className="more-btn"
+                                                    disabled={isFetchingMore}
+                                                    onClick={() => fetchRecommendations(false)}
+                                                >
+                                                    <MdAutoAwesome className="btn-icon" /> {isFetchingMore ? '추천 주제 생성 중...' : '다시 추천받기'}
                                                 </button>
                                             </div>
                                         )}
@@ -631,8 +680,8 @@ const ProjectDetailPage = () => {
                                 );
                             })()
                         ) : (
-                            <TopicDetailView 
-                                topic={topicDetail} 
+                            <TopicDetailView
+                                topic={topicDetail}
                                 isLoading={isTopicLoading}
                                 onBack={() => setSelectedTopicId(null)}
                                 onReaction={handleReaction}
@@ -644,7 +693,7 @@ const ProjectDetailPage = () => {
                     </section>
                 </div>
 
-                <AlertModal 
+                <AlertModal
                     isOpen={modal.isOpen}
                     type={modal.type}
                     title={modal.title}
@@ -664,7 +713,7 @@ const ProjectDetailPage = () => {
                                 </div>
                                 <button className="close-x-btn" onClick={() => setIsUserModalOpen(false)}>✕</button>
                             </div>
-                            
+
                             <div className="profile-body">
                                 {selectedUser.skillIds && selectedUser.skillIds.length > 0 && (
                                     <div className="profile-info-group">
@@ -677,7 +726,7 @@ const ProjectDetailPage = () => {
                                     </div>
                                 )}
                             </div>
-                            
+
                             <button className="profile-close-btn" onClick={() => setIsUserModalOpen(false)}>확인</button>
                         </div>
                     </div>
