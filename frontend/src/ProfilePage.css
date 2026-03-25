@@ -116,7 +116,15 @@
     background-color: #fff;
     font-size: 13px;
     color: #666;
+    cursor: default;
+}
+
+.tag-button:enabled {
     cursor: pointer;
+}
+
+.tag-button:disabled {
+    cursor: default;
 }
 
 .tag-button.active {
