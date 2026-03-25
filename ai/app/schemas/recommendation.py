@@ -4,7 +4,7 @@ from app.schemas.base import CamelModel
 class RecommendationRequest(CamelModel):
     project_id: int
     domain_ids: List[int]
-    preference_embeddings: Optional[List[float]] = None
+    preference_embedding: Optional[List[float]] = None
     
 
 class TopicItem(CamelModel):
