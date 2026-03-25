@@ -201,7 +201,6 @@ const MainPage = () => {
                                 ))}
                             </div>
                             <div className="discovery-footer">
-                                <div className="footer-line"></div>
                                 <button className="discovery-more-btn">
                                     <MdAdd className="btn-icon" /> 더보기
                                 </button>
@@ -209,12 +208,11 @@ const MainPage = () => {
                         </>
                     ) : (
                         <div className="empty-project">
-                            <div className="empty-icon-container">
-                                <span className="rocket-icon">🚀</span>
-                            </div>
                             <p className="empty-text">현재 참여하고 있는 프로젝트가 없어요!</p>
                             <p className="empty-subtext">새로운 주제를 추천받거나 직접 프로젝트를 생성해볼까요?</p>
-                            <button className="start-button" onClick={handleCreateProject}>프로젝트 시작하기</button>
+                            <button className="action-button primary" onClick={handleCreateProject} style={{ marginTop: '30px', padding: '0 48px', minHeight: '64px', fontSize: '18px', borderRadius: '16px' }}>
+                                <MdAdd className="button-icon" style={{ fontSize: '24px' }} /> 프로젝트 시작하기
+                            </button>
                         </div>
                     )}
                 </section>
