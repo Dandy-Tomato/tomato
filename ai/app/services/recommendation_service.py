@@ -21,7 +21,7 @@ class RecommendationService:
         
         topics = self.repository.find_topics(
             project_id=request.project_id,
-            preference_embedding=request.preference_embeddings,
+            preference_embedding=request.preference_embedding,
             domain_ids=request.domain_ids,
             top_k=TOP_K
         )
