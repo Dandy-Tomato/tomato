@@ -14,12 +14,13 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import site.to_mato.project.entity.Project;
+import site.to_mato.common.entity.BaseEntity;
 
 @Getter
 @Entity
 @Table(name = "child_topics")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ChildTopic {
+public class ChildTopic extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
