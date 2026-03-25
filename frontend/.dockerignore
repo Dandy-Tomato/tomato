@@ -6,4 +6,5 @@ Dockerfile
 Jenkinsfile
 .env
 .env.*
+!.env.production
 npm-debug.log
