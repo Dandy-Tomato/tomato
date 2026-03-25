@@ -3,6 +3,8 @@ package site.to_mato.recommendation.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import site.to_mato.recommendation.entity.ActionLog;
 import site.to_mato.recommendation.entity.ActionLogProcess;
 import site.to_mato.recommendation.entity.enums.ActionType;
@@ -33,7 +35,7 @@ public class ActionLogService {
                 topicId,
                 actionType,
                 null
-                );
+        );
 
         ActionLog savedActionLog = actionLogRepository.save(actionLog);
 
@@ -42,7 +44,12 @@ public class ActionLogService {
 
         ActionLogEvent event = ActionLogEvent.from(savedActionLog);
 
-        recommendationEventProducer.publishActionLog(event);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                recommendationEventProducer.publishActionLog(event);
+            }
+        });
 
         return savedActionLog.getId();
     }
