@@ -1,4 +1,4 @@
-package site.to_mato.common.ai;
+package site.to_mato.llm.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
