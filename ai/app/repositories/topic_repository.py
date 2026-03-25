@@ -40,17 +40,17 @@ def find_topic_skill_ids_by_topic_id(
     return [int(row["skill_id"]) for row in rows]
 
 
-def find_topic_domain_ids_by_topic_id(
+def find_topic_domain_id_by_topic_id(
     db: Session,
     topic_id: int
-) -> list[int]:
+) -> int | None:
     sql = text(
         """
-        SELECT td.domain_id
-        FROM topic_domains td
-        WHERE td.topic_id = :topic_id
+        SELECT domain_id
+        FROM topics
+        WHERE topic_id = :topic_id
         """
     )
 
-    rows = db.execute(sql, {"topic_id": topic_id}).mappings().all()
-    return [int(row["domain_id"]) for row in rows]
+    result = db.execute(sql, {"topic_id": topic_id}).scalar()
+    return int(result) if result is not None else None

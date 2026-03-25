@@ -16,7 +16,7 @@ from app.repositories.project_repository import (
 )
 from app.repositories.project_skill_repository import upsert_project_skill_weight
 from app.repositories.topic_repository import (
-    find_topic_domain_ids_by_topic_id,
+    find_topic_domain_id_by_topic_id,
     find_topic_embedding_by_id,
     find_topic_skill_ids_by_topic_id,
 )
@@ -281,7 +281,8 @@ def reflect_project_skill_and_domain_weight(
         db=db,
         topic_id=topic_id,
     )
-    domain_ids = find_topic_domain_ids_by_topic_id(
+
+    domain_id = find_topic_domain_id_by_topic_id(
         db=db,
         topic_id=topic_id,
     )
@@ -294,7 +295,7 @@ def reflect_project_skill_and_domain_weight(
             weight=action_type.weight,
         )
 
-    for domain_id in domain_ids:
+    if domain_id is not None:
         upsert_project_domain_weight(
             db=db,
             project_id=project_id,

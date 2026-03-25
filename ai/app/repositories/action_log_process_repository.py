@@ -14,7 +14,7 @@ def find_action_log_process_by_action_log_id(
             action_log_id,
             status,
             retry_count,
-            last_error_message
+            error_message
         FROM action_log_processes
         WHERE action_log_id = :action_log_id
         """
@@ -29,7 +29,7 @@ def find_action_log_process_by_action_log_id(
         "action_log_id": row[0],
         "status": row[1],
         "retry_count": row[2],
-        "last_error_message": row[3],
+        "error_message": row[3],
     }
 
 
@@ -78,7 +78,7 @@ def mark_action_log_failed(
         UPDATE action_log_processes
         SET status = 'FAILED',
             retry_count = retry_count + 1,
-            last_error_message = :error_message,
+            error_message = :error_message,
             updated_at = NOW()
         WHERE action_log_id = :action_log_id
         """
