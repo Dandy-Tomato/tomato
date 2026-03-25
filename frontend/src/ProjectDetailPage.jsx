@@ -15,7 +15,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 
 // 주제 상세 보기 컴포넌트
 const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, getDomainName, getSkillName }) => {
-    if (isLoading) return <div className="topic-detail-loading">데이터를 불러오는 중...</div>;
+    if (isLoading || !topic) return <div className="topic-detail-loading">데이터를 불러오는 중...</div>;
     const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' || 
                      topic.isBookmark === true || topic.isBookmark === 'true' || 
                      topic.bookmarked === true || topic.bookmarked === 'true';
@@ -32,6 +32,12 @@ const TopicDetailView = ({ topic, isLoading, onBack, onReaction, onBookmark, get
                             onClick={() => onReaction(topic.topicId, 'LIKE')}
                         >
                             <MdThumbUp />
+                        </button>
+                        <button 
+                            className={`topic-action-btn ${topic.isReaction === 'DISLIKE' ? 'active' : ''}`}
+                            onClick={() => onReaction(topic.topicId, 'DISLIKE')}
+                        >
+                            <MdThumbDown />
                         </button>
                         <button 
                             className={`topic-action-btn bookmark ${isMarked ? 'active' : ''}`}
@@ -233,6 +239,21 @@ const ProjectDetailPage = () => {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/recommendations/${topicId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            
+            if (response.status === 403) {
+                showAlert('error', '권한 없음', '해당 프로젝트에 접근 권한이 없습니다.');
+                setSelectedTopicId(null);
+                return;
+            } else if (response.status === 404) {
+                showAlert('error', '오류', '프로젝트를 찾을 수 없습니다.');
+                setSelectedTopicId(null);
+                return;
+            } else if (response.status === 500) {
+                showAlert('error', '서버 오류', '추천 서버 호출에 실패했습니다.');
+                setSelectedTopicId(null);
+                return;
+            }
+
             const result = await response.json();
             console.log("Topic Detail API Result:", result);
 
@@ -252,9 +273,11 @@ const ProjectDetailPage = () => {
     };
 
     const handleReaction = async (topicId, reactionType) => {
+        if (window.isReactionPending) return; // 연속 클릭 방지
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
+        window.isReactionPending = true;
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/topics/${topicId}/reaction`, {
                 method: 'POST',
@@ -264,15 +287,23 @@ const ProjectDetailPage = () => {
                 },
                 body: JSON.stringify({ 
                     reaction: reactionType,
-                    version: topicDetail?.reactionVersion || null
+                    // 기존 데이터가 없는 상태(초기 생성)일 때는 무조건 null을 전달
+                    version: topicDetail?.isReaction ? (topicDetail?.reactionVersion ?? null) : null
                 })
             });
 
             if (response.ok) {
-                // 성공 시 상세 정보를 다시 불러와서 최신 상태(애니메이션, 개수 등) 반영
-                fetchTopicDetail(topicId);
+                const result = await response.json();
+                // 전체를 재조회하지 않고 즉시 상태 업데이트 (반응 속도 개선 및 깜빡임 제거)
+                setTopicDetail(prev => ({
+                    ...prev,
+                    isReaction: result.data.isReaction,
+                    reactionVersion: result.data.reactionVersion
+                }));
                 // 목록도 갱신
-                fetchRecommendations();
+                setRecommendations(prev => prev.map(t => 
+                    t.topicId === topicId ? { ...t, isReaction: result.data.isReaction } : t
+                ));
             } else if (response.status === 409) {
                 const result = await response.json();
                 showAlert('error', '충돌 발생', result.message || '다른 사용자가 먼저 반응을 변경했습니다.');
@@ -283,13 +314,17 @@ const ProjectDetailPage = () => {
         } catch (error) {
             console.error("Error handling reaction:", error);
             showAlert('error', '오류', '통신 중 오류가 발생했습니다.');
+        } finally {
+            window.isReactionPending = false;
         }
     };
 
     const handleBookmarkToggle = async (topicId) => {
+        if (window.isBookmarkPending) return; // 연속 클릭 방지
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
+        window.isBookmarkPending = true;
         try {
             const response = await fetch(`${API_BASE_URL}/projects/${projectId}/topics/${topicId}/bookmark`, {
                 method: 'POST',
@@ -298,15 +333,30 @@ const ProjectDetailPage = () => {
 
             if (response.ok) {
                 const result = await response.json();
-                const newStatus = result.data?.isBookmarked;
                 
-                // 목록(recommendations) 상태를 즉시 업데이트 (목록 API에 필드가 없어도 유지되게 함)
+                // 백엔드 API 응답 구조가 Boolean인지 Object인지 판별, 못 찾으면 기존 상태의 무조건 반대값 토글 적용
+                let newStatus;
+                if (typeof result.data === 'boolean') {
+                    newStatus = result.data;
+                } else if (result.data !== null && typeof result.data === 'object' && 'isBookmarked' in result.data) {
+                    newStatus = result.data.isBookmarked;
+                } else {
+                    const currentTopic = recommendations.find(t => t.topicId === topicId) || topicDetail;
+                    const isCurrentlyMarked = currentTopic?.isBookmarked === true || currentTopic?.isBookmarked === 'true' || currentTopic?.isBookmark === true;
+                    newStatus = !isCurrentlyMarked;
+                }
+                
+                // 목록 상태 즉시 업데이트
                 setRecommendations(prev => prev.map(t => 
                     t.topicId === topicId ? { ...t, isBookmarked: newStatus } : t
                 ));
 
+                // 상세 보기 상태 즉시 업데이트
                 if (selectedTopicId === topicId) {
-                    fetchTopicDetail(topicId);
+                    setTopicDetail(prev => ({
+                        ...prev,
+                        isBookmarked: newStatus
+                    }));
                 }
             } else {
                 showAlert('error', '오류', '북마크 처리에 실패했습니다.');
@@ -314,6 +364,8 @@ const ProjectDetailPage = () => {
         } catch (error) {
             console.error("Error handling bookmark:", error);
             showAlert('error', '오류', '통신 중 오류가 발생했습니다.');
+        } finally {
+            window.isBookmarkPending = false;
         }
     };
 
@@ -485,74 +537,99 @@ const ProjectDetailPage = () => {
                     <aside className="recommend-sidebar">
                         <div 
                             className={`sidebar-item ${activeTab === '추천 주제' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('추천 주제')}
+                            onClick={() => { setActiveTab('추천 주제'); setSelectedTopicId(null); setVisibleCount(6); }}
                         >
                             <MdAutoAwesome className="s-icon" /> 추천 주제
                         </div>
-                        <div className="sidebar-item"><MdSearch className="s-icon" /> 주제 검색</div>
-                        <div className="sidebar-item"><MdBookmarkBorder className="s-icon" /> 북마크</div>
+                        <div 
+                            className={`sidebar-item ${activeTab === '주제 검색' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('주제 검색'); setSelectedTopicId(null); setVisibleCount(6); }}
+                        >
+                            <MdSearch className="s-icon" /> 주제 검색
+                        </div>
+                        <div 
+                            className={`sidebar-item ${activeTab === '북마크' ? 'active' : ''}`}
+                            onClick={() => { setActiveTab('북마크'); setSelectedTopicId(null); setVisibleCount(6); }}
+                        >
+                            <MdBookmarkBorder className="s-icon" /> 북마크
+                        </div>
                     </aside>
 
                     <section className="recommend-main">
                         {!selectedTopicId ? (
-                            <>
-                                <div className="recommend-header">
-                                    <h2 className="recommend-title">{activeTab}</h2>
-                                    <span className="recommend-count">
-                                        {recommendations.length > 0 
-                                            ? `${Math.min(visibleCount, recommendations.length)} / ${recommendations.length}` 
-                                            : '0 / 0'}
-                                    </span>
-                                </div>
-
-                                <div className="topic-grid">
-                                        {recommendations.slice(0, visibleCount).map(topic => {
-                                            // 북마크 상태값의 타입(불리언, 문자열 등)에 관계없이 정확히 체크함
-                                            const isMarked = topic.isBookmarked === true || topic.isBookmarked === 'true' || 
-                                                             topic.isBookmark === true || topic.isBookmark === 'true' || 
-                                                             topic.bookmarked === true || topic.bookmarked === 'true';
-                                            
-                                            return (
-                                                <div 
-                                                    key={topic.topicId} 
-                                                    className="topic-card clickable"
-                                                    onClick={() => setSelectedTopicId(topic.topicId)}
-                                                >
-                                                    <div className="topic-card-header">
-                                                        <h3 className="topic-title">{topic.title}</h3>
-                                                        <div 
-                                                            className="bookmark-btn-wrap" 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleBookmarkToggle(topic.topicId);
-                                                            }}
-                                                        >
-                                                            {isMarked ? (
-                                                                <MdBookmark className="bookmark-icon active" style={{ color: '#ee7c62' }} />
-                                                            ) : (
-                                                                <MdBookmarkBorder className="bookmark-icon" />
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="topic-domain-tag">{getDomainName(topic.domainId)}</div>
-                                                    <div className="topic-footer">
-                                                        <div className="topic-skills">
-                                                            {topic.skills.map(s => <span key={s} className="t-skill-tag">{getSkillName(s)}</span>)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                </div>
+                            (() => {
+                                // 북마크 여부 확인 유틸 함수
+                                const isMarkedTopic = (t) => t.isBookmarked === true || t.isBookmarked === 'true' || t.isBookmark === true || t.isBookmark === 'true' || t.bookmarked === true || t.bookmarked === 'true';
                                 
-                                {recommendations.length > visibleCount && (
-                                    <div className="more-button-container">
-                                        <button className="more-btn" onClick={() => setVisibleCount(recommendations.length)}>
-                                            <MdAdd className="btn-icon" /> 더보기
-                                        </button>
-                                    </div>
-                                )}
-                            </>
+                                // 현재 탭 상태에 따라 보여줄 목록 필터링
+                                const displayRecommendations = activeTab === '북마크' 
+                                    ? recommendations.filter(isMarkedTopic)
+                                    : recommendations;
+
+                                return (
+                                    <>
+                                        <div className="recommend-header">
+                                            <h2 className="recommend-title">{activeTab}</h2>
+                                            <span className="recommend-count">
+                                                {displayRecommendations.length > 0 
+                                                    ? `${Math.min(visibleCount, displayRecommendations.length)} / ${displayRecommendations.length}` 
+                                                    : '0 / 0'}
+                                            </span>
+                                        </div>
+
+                                        {displayRecommendations.length === 0 ? (
+                                            <div className="empty-state-message" style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                                                해당되는 주제가 없거나 북마크가 비어 있습니다.
+                                            </div>
+                                        ) : (
+                                            <div className="topic-grid">
+                                                {displayRecommendations.slice(0, visibleCount).map(topic => {
+                                                    const isMarked = isMarkedTopic(topic);
+                                                    
+                                                    return (
+                                                        <div 
+                                                            key={topic.topicId} 
+                                                            className="topic-card clickable"
+                                                            onClick={() => setSelectedTopicId(topic.topicId)}
+                                                        >
+                                                            <div className="topic-card-header">
+                                                                <h3 className="topic-title">{topic.title}</h3>
+                                                                <div 
+                                                                    className="bookmark-btn-wrap" 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleBookmarkToggle(topic.topicId);
+                                                                    }}
+                                                                >
+                                                                    {isMarked ? (
+                                                                        <MdBookmark className="bookmark-icon active" style={{ color: '#ee7c62' }} />
+                                                                    ) : (
+                                                                        <MdBookmarkBorder className="bookmark-icon" />
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="topic-domain-tag">{getDomainName(topic.domainId)}</div>
+                                                            <div className="topic-footer">
+                                                                <div className="topic-skills">
+                                                                    {topic.skills.map(s => <span key={s} className="t-skill-tag">{getSkillName(s)}</span>)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        
+                                        {displayRecommendations.length > visibleCount && (
+                                            <div className="more-button-container">
+                                                <button className="more-btn" onClick={() => setVisibleCount(displayRecommendations.length)}>
+                                                    <MdAdd className="btn-icon" /> 더보기
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()
                         ) : (
                             <TopicDetailView 
                                 topic={topicDetail} 

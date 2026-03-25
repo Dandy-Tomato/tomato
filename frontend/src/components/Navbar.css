@@ -24,12 +24,12 @@
     display: flex;
     align-items: center;
     cursor: pointer;
-    gap: 10px;
+    gap: 12px;
 }
 
 .logo-icon {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     object-fit: contain;
 }
 

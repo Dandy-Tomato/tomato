@@ -57,7 +57,11 @@ const ProfilePage = () => {
                     if (response.ok && result.data) {
                         const dataArray = Array.isArray(result.data) ? result.data : (result.data.content || []);
                         console.log("Profile Processed Data Array:", dataArray);
-                        const filtered = dataArray.filter(c => !profile.companies.some(pc => pc.id === c.id));
+                        const filtered = dataArray.filter(c => 
+                            !profile.companies.some(pc => 
+                                (c.id && pc.id === c.id) || (pc.name === c.name)
+                            )
+                        );
                         setCompanyResults(filtered);
                     } else {
                         console.error("Company search failure (Profile):", result);
@@ -97,16 +101,22 @@ const ProfilePage = () => {
             if (response.ok && result.data) {
                 const data = result.data;
 
-                // 직무 ID 매핑 (Number로 강제 변환 및 dbName 매핑 지원)
+                // 직무 정보 파싱 (다양한 필드명 및 데이터 구조 대응)
+                const rawPos = data.position || data.positionId || data.job || data.position_id;
                 let posId = null;
-                if (data.position) {
-                    if (typeof data.position === 'number') {
-                        posId = data.position;
-                    } else if (typeof data.position === 'string') {
-                        // "frontend", "backend" 등 dbName과 매칭 시도
-                        const found = POSITIONS.find(p => p.dbName === data.position || p.name === data.position || String(p.id) === data.position);
+                
+                if (rawPos) {
+                    if (typeof rawPos === 'object' && !Array.isArray(rawPos)) {
+                        posId = Number(rawPos.id || rawPos.positionId || 0);
+                    } else {
+                        // DB명(frontend), 한글명, 혹은 ID값과 매칭 시도
+                        const found = POSITIONS.find(p => 
+                            p.dbName === rawPos || 
+                            p.name === rawPos || 
+                            String(p.id) === String(rawPos)
+                        );
                         if (found) posId = Number(found.id);
-                        else if (!isNaN(data.position)) posId = Number(data.position);
+                        else if (!isNaN(rawPos)) posId = Number(rawPos);
                     }
                 }
 
@@ -127,9 +137,9 @@ const ProfilePage = () => {
                         name: c.name || c.companyName || `기업 ${c.id}`
                     }));
                 } else if (rawNames && Array.isArray(rawNames) && rawNames.length > 0) {
-                    // 2. 이름 배열이 있는 경우 (제공해주신 JSON 구조: companyNames: ["스위피", "스윙크"])
+                    // 2. 이름 배열이 있는 경우 (ID가 없으면 null 처리하여 저장 시 필터링)
                     finalCompanies = rawNames.map((name, index) => ({
-                        id: Number(rawIds[index]) || index, // ID가 없으면 리스트 인덱스라도 사용 (수정 시 필요)
+                        id: (rawIds && rawIds[index]) ? Number(rawIds[index]) : null,
                         name: name
                     }));
                 } else if (rawIds && Array.isArray(rawIds) && rawIds.length > 0) {
@@ -173,8 +183,13 @@ const ProfilePage = () => {
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
+            position: profile.positionId ? Number(profile.positionId) : null,
             positionId: profile.positionId ? Number(profile.positionId) : null,
-            companyIds: profile.companies.map(c => Number(c.id)),
+            companyIds: profile.companies
+                .map(c => c.id)
+                .filter(id => id !== null && !isNaN(Number(id)))
+                .map(id => Number(id)),
+            companyNames: profile.companies.map(c => c.name),
             skillIds: profile.skillIds.map(id => Number(id))
         };
 
@@ -213,8 +228,8 @@ const ProfilePage = () => {
     if (loading) return <div className="loading">로딩 중...</div>;
 
     // 도움 함수들
-    const getPositionName = (id) => POSITIONS.find(p => p.id === Number(id))?.name || id || '없음';
-    const getSkillName = (id) => SKILLS.find(s => s.id === Number(id))?.name || id;
+    const getPositionName = (id) => POSITIONS.find(p => Number(p.id) === Number(id))?.name || id || '없음';
+    const getSkillName = (id) => SKILLS.find(s => Number(s.id) === Number(id))?.name || id;
 
     const addSkill = (skill) => {
         if (!profile.skillIds.includes(skill.id)) {
@@ -224,7 +239,7 @@ const ProfilePage = () => {
     };
 
     const addCompany = (company) => {
-        if (!profile.companies.some(c => c.id === company.id)) {
+        if (!profile.companies.some(c => (company.id && c.id === company.id) || (c.name === company.name))) {
             setProfile({ ...profile, companies: [...profile.companies, { id: company.id, name: company.name }] });
         }
         setCompanySearch('');
@@ -287,7 +302,7 @@ const ProfilePage = () => {
                             {POSITIONS.map(pos => (
                                 <button
                                     key={pos.id}
-                                    className={`tag-button ${profile.positionId === pos.id ? 'active' : ''}`}
+                                    className={`tag-button ${Number(profile.positionId) === Number(pos.id) ? 'active' : ''}`}
                                     disabled={!isEditing}
                                     onClick={() => setProfile({ ...profile, positionId: pos.id })}
                                 >

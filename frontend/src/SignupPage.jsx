@@ -163,7 +163,11 @@ const SignupPage = () => {
                     console.log("Company Search API Result:", result);
                     if (response.ok && result.data) {
                         const dataArray = Array.isArray(result.data) ? result.data : (result.data.content || []);
-                        const filtered = dataArray.filter(c => !profile.companies.some(pc => pc.id === c.id));
+                        const filtered = dataArray.filter(c => 
+                            !profile.companies.some(pc => 
+                                (c.id && pc.id === c.id) || (pc.name === c.name)
+                            )
+                        );
                         setCompanyResults(filtered);
                     } else {
                         console.error("Company search failed:", result);
@@ -187,8 +191,8 @@ const SignupPage = () => {
 
     const addCompany = (company) => {
         if (!company) return;
-        // Check if the company is already added
-        if (profile.companies.some(c => c.id === company.id)) {
+        // Check if the company is already added (ID 또는 이름 중복 체크)
+        if (profile.companies.some(c => (company.id && c.id === company.id) || (c.name === company.name))) {
             showAlert('info', '이미 추가됨', '이미 추가된 기업입니다.');
             return;
         }
@@ -220,8 +224,10 @@ const SignupPage = () => {
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
+            position: techStack.positionId ? Number(techStack.positionId) : null,
             positionId: techStack.positionId ? Number(techStack.positionId) : null,
             companyIds: profile.companies.map(c => Number(c.id)),
+            companyNames: profile.companies.map(c => c.name),
             skillIds: techStack.skills.map(s => Number(s.id))
         };
 
