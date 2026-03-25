@@ -138,6 +138,8 @@ public class ChildTopicService {
                         "\\n5. content는 마크다운 형식으로 작성하세요." +
                         "\\n6. content에는 실제 줄바꿈을 사용하세요. (\\\\n 문자열 사용 금지)" +
                         "\\n7. JSON의 key는 반드시 title, content 두 개만 사용하세요." +
+                        "\\n8. 흔한 아이디어(예: 단순 CRUD 서비스, 일반적인 추천 서비스)는 지양하세요."+
+                        "\\n9.  원본 주제를 그대로 확장하지 말고, 새로운 관점(문제 정의, 타겟 사용자, 사용 시나리오)을 추가하여 재해석하세요."+
                         "\\n\\n출력 형식:\\n{\\\"title\\\": \\\"string\\\", \\\"content\\\": \\\"markdown\\\"}\"\n" +
                         "}",
                 topic.getTitle(), topic.getDescription(), topic.getDifficulty(), topic.getRecommendedTeamSize(), topic.getExpectedDurationWeek(),

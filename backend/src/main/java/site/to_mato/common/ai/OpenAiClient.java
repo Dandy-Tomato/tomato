@@ -50,7 +50,8 @@ public class OpenAiClient {
                                     Map.of("role", "system", "content", systemPrompt),
                                     Map.of("role", "user", "content", userPrompt)
                             ),
-                            "temperature", 0.7
+                            "temperature", 0.9,
+                            "top_p", 0.9
                     )
             );
 
