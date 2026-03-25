@@ -13,6 +13,7 @@ import site.to_mato.project.repository.ProjectDomainRepository;
 import site.to_mato.project.repository.ProjectMemberRepository;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.project.repository.ProjectSkillRepository;
+import site.to_mato.topic.dto.response.ChildTopicDetailResponse;
 import site.to_mato.topic.dto.response.RefinedTopicResponse;
 import site.to_mato.topic.entity.ChildTopic;
 import site.to_mato.topic.entity.Topic;
@@ -56,6 +57,34 @@ public class ChildTopicService {
         ChildTopic savedChildTopic = childTopicRepository.save(childTopic);
 
         return RefinedTopicResponse.from(savedChildTopic);
+    }
+
+    @Transactional(readOnly = true)
+    public ChildTopicDetailResponse getChildTopic(Long userId, Long projectId, Long childTopicId) {
+        getProjectWithAuthCheck(projectId, userId);
+
+        ChildTopic childTopic = childTopicRepository.findById(childTopicId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHILD_TOPIC_NOT_FOUND));
+
+        if (!childTopic.getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN);
+        }
+
+        return ChildTopicDetailResponse.from(childTopic);
+    }
+
+    @Transactional
+    public void deleteChildTopic(Long userId, Long projectId, Long childTopicId) {
+        getProjectWithAuthCheck(projectId, userId);
+
+        ChildTopic childTopic = childTopicRepository.findById(childTopicId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHILD_TOPIC_NOT_FOUND));
+
+        if (!childTopic.getProject().getId().equals(projectId)) {
+            throw new BusinessException(ErrorCode.PROJECT_FORBIDDEN);
+        }
+
+        childTopicRepository.delete(childTopic);
     }
 
     public String refineMockTopic() {

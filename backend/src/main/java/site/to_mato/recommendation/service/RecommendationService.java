@@ -1,12 +1,10 @@
 package site.to_mato.recommendation.service;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +24,9 @@ import site.to_mato.recommendation.dto.response.RecommendationApiResponse;
 import site.to_mato.recommendation.dto.response.RecommendationDetailResponse;
 import site.to_mato.recommendation.dto.response.RecommendationResponse;
 import site.to_mato.recommendation.client.RecommendationClient;
+import site.to_mato.topic.dto.response.ChildTopicDetailResponse;
+import site.to_mato.topic.entity.ChildTopic;
+import site.to_mato.topic.repository.ChildTopicRepository;
 import site.to_mato.topic.entity.Topic;
 import site.to_mato.topic.repository.TopicRepository;
 
@@ -41,6 +42,7 @@ public class RecommendationService {
     private final TopicRepository topicRepository;
     private final ProjectTopicBookmarkRepository projectTopicBookmarkRepository;
     private final ProjectTopicReactionRepository projectTopicReactionRepository;
+    private final ChildTopicRepository childTopicRepository;
 
     // 프로젝트 별 추천 주제 조회
     public List<RecommendationResponse> getRecommendationsByProjectId(Long projectId) {
@@ -92,9 +94,7 @@ public class RecommendationService {
     }
 
     public RecommendationDetailResponse getRecommendationDetail(Long projectId, Long topicId) {
-
         Topic topic =  topicRepository.findByIdWithSkills(topicId).orElseThrow(() -> new BusinessException(ErrorCode.TOPIC_NOT_FOUND));
-
         List<Long> skillIds = topic.getTopicSkills().stream().map(ts -> ts.getSkill().getId()).toList();
 
         boolean isBookmarked = projectTopicBookmarkRepository.findByProject_IdAndTopic_Id(projectId, topicId).isPresent();
@@ -110,6 +110,11 @@ public class RecommendationService {
                 .map(ProjectTopicReaction::getVersion)
                 .orElse(null);
 
+        List<ChildTopic> childTopics = childTopicRepository.findByTopic_IdAndProject_Id(topicId, projectId);
+        List<ChildTopicDetailResponse> childTopicInfos = childTopics.stream()
+                .map(ChildTopicDetailResponse::from)
+                .collect(Collectors.toList());
+
         return RecommendationDetailResponse.of(
                 topic.getId(),
                 topic.getTitle(),
@@ -120,7 +125,8 @@ public class RecommendationService {
                 skillIds,
                 isBookmarked,
                 isReaction,
-                reactionVersion
+                reactionVersion,
+                childTopicInfos
         );
     }
 }
