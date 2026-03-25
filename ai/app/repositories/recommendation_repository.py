@@ -112,8 +112,8 @@ class RecommendationRepository:
                 SELECT
                     ct.topic_id,
                     COALESCE(
-                        ARRAY_AGG(DISTINCT s.name) FILTER (WHERE s.name IS NOT NULL),
-                        ARRAY[]::text[]
+                        ARRAY_AGG(DISTINCT s.skill_id) FILTER (WHERE s.skill_id IS NOT NULL),
+                        ARRAY[]::bigint[]
                     ) AS skills
                 FROM candidate_topics ct
                 LEFT JOIN topic_skills ts ON ts.topic_id = ct.topic_id
@@ -198,12 +198,12 @@ class RecommendationRepository:
                 SELECT
                     t.topic_id,
                     COALESCE(
-                        ARRAY_AGG(DISTINCT s.name) FILTER (WHERE s.name IS NOT NULL),
-                        ARRAY[]::text[]
+                        ARRAY_AGG(DISTINCT s.skill_id) FILTER (WHERE s.skill_id IS NOT NULL),
+                        ARRAY[]::bigint[]
                     ) AS skills
                 FROM topics t
                 LEFT JOIN topic_skills ts ON ts.topic_id = t.topic_id
-                LEFT JOIN skills s        ON s.skill_id  = ts.skill_id
+                LEFT JOIN skills s        ON s.skill_id = ts.skill_id
                 GROUP BY t.topic_id
             )
             SELECT

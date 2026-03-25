@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -15,12 +16,18 @@ import lombok.RequiredArgsConstructor;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.project.entity.Project;
+import site.to_mato.project.entity.ProjectTopicReaction;
 import site.to_mato.project.repository.ProjectDomainRepository;
 import site.to_mato.project.repository.ProjectRepository;
+import site.to_mato.project.repository.ProjectTopicBookmarkRepository;
+import site.to_mato.project.repository.ProjectTopicReactionRepository;
 import site.to_mato.recommendation.dto.request.RecommendationRequest;
 import site.to_mato.recommendation.dto.response.RecommendationApiResponse;
+import site.to_mato.recommendation.dto.response.RecommendationDetailResponse;
 import site.to_mato.recommendation.dto.response.RecommendationResponse;
 import site.to_mato.recommendation.client.RecommendationClient;
+import site.to_mato.topic.entity.Topic;
+import site.to_mato.topic.repository.TopicRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +38,9 @@ public class RecommendationService {
     private final ProjectDomainRepository projectDomainRepository;
     private final ProjectRepository projectRepository;
     private final RecommendationClient recommendationClient;
+    private final TopicRepository topicRepository;
+    private final ProjectTopicBookmarkRepository projectTopicBookmarkRepository;
+    private final ProjectTopicReactionRepository projectTopicReactionRepository;
 
     // 프로젝트 별 추천 주제 조회
     public List<RecommendationResponse> getRecommendationsByProjectId(Long projectId) {
@@ -61,5 +71,38 @@ public class RecommendationService {
         RecommendationApiResponse apiResponse = recommendationClient.getRecommendations(request);
 
         return apiResponse.data();
+    }
+
+    public RecommendationDetailResponse getRecommendationDetail(Long projectId, Long topicId) {
+
+        Topic topic =  topicRepository.findByIdWithSkills(topicId).orElseThrow(() -> new BusinessException(ErrorCode.TOPIC_NOT_FOUND));
+
+        List<Long> skillIds = topic.getTopicSkills().stream().map(ts -> ts.getSkill().getId()).toList();
+
+        boolean isBookmarked = projectTopicBookmarkRepository.findByProject_IdAndTopic_Id(projectId, topicId).isPresent();
+
+        Optional<ProjectTopicReaction> reactionOpt =
+                projectTopicReactionRepository.findByProject_IdAndTopic_Id(projectId, topicId);
+
+        String isReaction = reactionOpt
+                .map(r -> r.getReaction().name())
+                .orElse(null);
+
+        Long reactionVersion = reactionOpt
+                .map(ProjectTopicReaction::getVersion)
+                .orElse(null);
+
+        return RecommendationDetailResponse.of(
+                topic.getId(),
+                topic.getTitle(),
+                topic.getDescription(),
+                topic.getExpectedDurationWeek(),
+                topic.getRecommendedTeamSize(),
+                topic.getDomain().getId(),
+                skillIds,
+                isBookmarked,
+                isReaction,
+                reactionVersion
+        );
     }
 }

@@ -17,4 +17,4 @@ class TopicItem(CamelModel):
     domain_id: int
     domain_name: str
     source_repo_id: int
-    skills: List[str] = []
+    skills: List[int] = []

@@ -2,39 +2,40 @@ package site.to_mato.recommendation.dto.response;
 
 import java.util.List;
 
-public record RecommendationResponse(
+public record RecommendationDetailResponse(
         Long topicId,
         String title,
         String description,
         Integer expectedDurationWeek,
         Integer recommendedTeamSize,
-        Integer difficulty,
         Long domainId,
-        String domainName,
         List<Long> skills,
-        Boolean isBookmarked) {
+        Boolean isBookmarked,
+        String isReaction,
+        Long reactionVersion
+) {
 
-    public static RecommendationResponse of(
+    public static RecommendationDetailResponse of(
             Long topicId,
             String title,
             String description,
             Integer expectedDurationWeek,
             Integer recommendedTeamSize,
-            Integer difficulty,
             Long domainId,
-            String domainName,
             List<Long> skills,
-            Boolean isBookmarked) {
-        return new RecommendationResponse(
+            Boolean isBookmarked,
+            String isReaction,
+            Long reactionVersion) {
+        return new RecommendationDetailResponse(
                 topicId,
                 title,
                 description,
                 expectedDurationWeek,
                 recommendedTeamSize,
-                difficulty,
                 domainId,
-                domainName,
                 skills,
-                isBookmarked);
+                isBookmarked,
+                isReaction,
+                reactionVersion);
     }
 }

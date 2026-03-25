@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import site.to_mato.common.response.ApiResponse;
+import site.to_mato.recommendation.dto.response.RecommendationDetailResponse;
 import site.to_mato.recommendation.dto.response.RecommendationResponse;
 import site.to_mato.recommendation.service.RecommendationService;
 
@@ -25,5 +26,14 @@ public class RecommendationController {
 
         List<RecommendationResponse> responses = recommendationService.getRecommendationsByProjectId(projectId);
         return ApiResponse.ok(responses);
+    }
+
+    @GetMapping("/{topicId}")
+    public ApiResponse<RecommendationDetailResponse> getRecommendationDetail(
+            @PathVariable Long projectId,
+            @PathVariable Long topicId) {
+
+        RecommendationDetailResponse response = recommendationService.getRecommendationDetail(projectId, topicId);
+        return ApiResponse.ok(response);
     }
 }

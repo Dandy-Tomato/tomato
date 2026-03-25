@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 import site.to_mato.common.response.ApiResponse;
 import site.to_mato.project.dto.request.ReactionRequest;
 import site.to_mato.project.dto.response.BookmarkResponse;
+import site.to_mato.project.dto.response.ProjectTopicReactionResponse;
 import site.to_mato.project.service.ProjectTopicBookmarkService;
 import site.to_mato.project.service.ProjectTopicReactionService;
 
@@ -18,14 +19,16 @@ public class ProjectTopicActionController {
     private final ProjectTopicBookmarkService projectTopicBookmarkService;
 
     @PostMapping("/reaction")
-    public ApiResponse<Void> setReaction(
+    public ApiResponse<ProjectTopicReactionResponse> setReaction(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long projectId,
             @PathVariable Long topicId,
             @RequestBody ReactionRequest request
     ) {
-        projectTopicReactionService.setReaction(userId, projectId, topicId, request.reaction(), request.version());
-        return ApiResponse.ok(null);
+        ProjectTopicReactionResponse response =
+                projectTopicReactionService.setReaction(userId, projectId, topicId, request);
+
+        return ApiResponse.ok(response);
     }
 
     @PostMapping("/bookmark")
