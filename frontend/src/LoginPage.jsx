@@ -62,7 +62,7 @@ const LoginPage = () => {
                 localStorage.setItem("accessToken", result.data.accessToken);
                 localStorage.setItem("refreshToken", result.data.refreshToken);
                 localStorage.setItem("userId", result.data.userId); // userId 저장 추가
-                showAlert('success', '로그인 성공', '토마토에 오신 것을 환영합니다!', () => navigate('/main'));
+                showAlert('success', '로그인 성공', '토마토에 오신 것을 환영합니다!', () => navigate('/main', { replace: true }));
             } else {
                 // 에러 처리 (400, 401 등)
                 showAlert('error', '로그인 실패', result.message || '로그인에 실패했습니다. 정보를 확인해 주세요.');

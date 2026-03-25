@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import './ProfilePage.css';
-import { MdPerson, MdCode, MdBusiness, MdSearch } from 'react-icons/md';
+import { MdPerson, MdCode, MdBusiness } from 'react-icons/md';
 import { POSITIONS, SKILLS } from './constants';
+import AlertModal from './components/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -22,6 +23,11 @@ const ProfilePage = () => {
     const [companySearch, setCompanySearch] = useState('');
     const [companyResults, setCompanyResults] = useState([]);
     const [isCompanyLoading, setIsCompanyLoading] = useState(false);
+    const [modal, setModal] = useState({ isOpen: false, type: 'success', title: '', message: '', onConfirm: null });
+
+    const showAlert = (type, title, message, onConfirm = null) => {
+        setModal({ isOpen: true, type, title, message, onConfirm });
+    };
 
     useEffect(() => {
         console.log("Skill search active. Input:", skillSearch, "Total SKILLS:", SKILLS.length);
@@ -84,8 +90,8 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
         const token = localStorage.getItem("accessToken");
         if (!token) {
-            alert("로그인이 필요합니다.");
-            window.location.href = "/";
+            showAlert('error', '로그인 필요', '로그인이 필요합니다.');
+            window.location.href = '/';
             return;
         }
 
@@ -123,31 +129,30 @@ const ProfilePage = () => {
                 console.log("Full data from Profile API:", data);
                 console.log("companyNames from API:", data.companyNames);
                 
-                // 기업 정보 처리(ID와 이름의 매핑)
+                // 기업 정보 체계적 파싱
                 const rawIds = data.companyIds || data.company_ids || [];
-                const rawNames = data.companyNames || data.companyNameList || data.company_names;
-                const rawCompanies = data.companies || []; // 객체 배열 형태({id, name}) 대비
-                
+                const rawNames = data.companyNames || data.companyNameList || data.company_names || [];
+                const rawCompanies = data.companies || [];
+
                 let finalCompanies = [];
-                
+
                 if (rawCompanies.length > 0 && typeof rawCompanies[0] === 'object') {
-                    // 1. 객체 배열 형태인 경우 ([{id:1, name:'삼성'}, ...])
+                    // 1. 객체 배열 형태 ([{id:1, name:'삼성'}, ...])
                     finalCompanies = rawCompanies.map(c => ({
-                        id: Number(c.id) || 0,
+                        id: c.id != null ? Number(c.id) : null,
                         name: c.name || c.companyName || `기업 ${c.id}`
                     }));
-                } else if (rawNames && Array.isArray(rawNames) && rawNames.length > 0) {
-                    // 2. 이름 배열이 있는 경우 (ID가 없으면 null 처리하여 저장 시 필터링)
-                    finalCompanies = rawNames.map((name, index) => ({
-                        id: (rawIds && rawIds[index]) ? Number(rawIds[index]) : null,
-                        name: name
-                    }));
-                } else if (rawIds && Array.isArray(rawIds) && rawIds.length > 0) {
-                    // 3. ID 배열만 있는 경우 ([2014, 2015])
-                    finalCompanies = rawIds.map(id => ({
-                        id: Number(id),
-                        name: `기업 ${id}`
-                    }));
+                } else if (rawNames.length > 0 || rawIds.length > 0) {
+                    // 2. names 배열 기준, IDs 기준 인덱스 매핑
+                    const len = Math.max(rawNames.length, rawIds.length);
+                    for (let i = 0; i < len; i++) {
+                        const name = rawNames[i] || null;
+                        const rawId = rawIds[i];
+                        const id = (rawId != null && !isNaN(Number(rawId))) ? Number(rawId) : null;
+                        if (name || id) {
+                            finalCompanies.push({ id, name: name || `기업 ${id}` });
+                        }
+                    }
                 }
 
                 setProfile({
@@ -186,10 +191,9 @@ const ProfilePage = () => {
             position: profile.positionId ? Number(profile.positionId) : null,
             positionId: profile.positionId ? Number(profile.positionId) : null,
             companyIds: profile.companies
-                .map(c => c.id)
-                .filter(id => id !== null && !isNaN(Number(id)))
-                .map(id => Number(id)),
-            companyNames: profile.companies.map(c => c.name),
+                .filter(c => c.id != null && !isNaN(Number(c.id)))
+                .map(c => Number(c.id)),
+            companyNames: profile.companies.map(c => c.name).filter(Boolean),
             skillIds: profile.skillIds.map(id => Number(id))
         };
 
@@ -210,18 +214,19 @@ const ProfilePage = () => {
             console.log("Save Response Data:", result);
 
             if (response.ok) {
-                alert("프로필이 수정되었습니다.");
-                setIsEditing(false);
-                fetchProfile(); // 최신 데이터 다시 불러오기
+                showAlert('success', '저장 완료', '프로필이 수정되었습니다.', () => {
+                    setIsEditing(false);
+                    fetchProfile();
+                });
             } else {
-                const errorMsg = result.message || "수정에 실패했습니다.";
-                const errorCode = result.errorCode ? ` (에러 코드: ${result.errorCode})` : "";
-                alert(`${errorMsg}${errorCode}\n상태 코드: ${response.status}`);
-                console.error("Save failure details:", result);
+                const errorMsg = result.message || '수정에 실패했습니다.';
+                const errorCode = result.errorCode ? ` (에러 코드: ${result.errorCode})` : '';
+                showAlert('error', '저장 실패', `${errorMsg}${errorCode}`);
+                console.error('Save failure details:', result);
             }
         } catch (error) {
-            console.error("Error updating profile:", error);
-            alert("서버 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.");
+            console.error('Error updating profile:', error);
+            showAlert('error', '서버 오류', '서버 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.');
         }
     };
 
@@ -232,16 +237,21 @@ const ProfilePage = () => {
     const getSkillName = (id) => SKILLS.find(s => Number(s.id) === Number(id))?.name || id;
 
     const addSkill = (skill) => {
-        if (!profile.skillIds.includes(skill.id)) {
-            setProfile({ ...profile, skillIds: [...profile.skillIds, skill.id] });
-        }
+        setProfile(prev => {
+            if (prev.skillIds.includes(skill.id)) return prev;
+            return { ...prev, skillIds: [...prev.skillIds, skill.id] };
+        });
         setSkillSearch('');
     };
 
     const addCompany = (company) => {
-        if (!profile.companies.some(c => (company.id && c.id === company.id) || (c.name === company.name))) {
-            setProfile({ ...profile, companies: [...profile.companies, { id: company.id, name: company.name }] });
-        }
+        setProfile(prev => {
+            const already = prev.companies.some(c =>
+                (company.id && c.id === company.id) || (c.name === company.name)
+            );
+            if (already) return prev;
+            return { ...prev, companies: [...prev.companies, { id: company.id, name: company.name }] };
+        });
         setCompanySearch('');
         setCompanyResults([]);
     };
@@ -418,13 +428,13 @@ const ProfilePage = () => {
                         <MdBusiness className="header-icon" />
                     </div>
                     <div className="company-tags">
-                        {profile.companies.map(c => (
-                            <span key={c.id} className="company-tag">
+                        {profile.companies.map((c, idx) => (
+                            <span key={`${c.name}-${idx}`} className="company-tag">
                                 {c.name || c.id}
                                 {isEditing && (
                                     <span
                                         className="tag-remove"
-                                        onClick={() => setProfile({ ...profile, companies: profile.companies.filter(comp => comp.id !== c.id) })}
+                                        onClick={() => setProfile({ ...profile, companies: profile.companies.filter((_, i) => i !== idx) })}
                                     >✕</span>
                                 )}
                             </span>
@@ -500,7 +510,7 @@ const ProfilePage = () => {
                                         if (companyResults.length > 0) {
                                             addCompany(companyResults[0]);
                                         } else if (companySearch.trim()) {
-                                            alert("검색 결과에서 기업을 선택해 주세요.");
+                                            showAlert('error', '기업 선택 필요', '검색 결과에서 기업을 선택해 주세요.');
                                         }
                                     }}
                                 >추가</button>
@@ -517,6 +527,17 @@ const ProfilePage = () => {
                     )}
                 </div>
             </main>
+
+            <AlertModal
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                onClose={() => {
+                    setModal(prev => ({ ...prev, isOpen: false }));
+                    if (modal.onConfirm) modal.onConfirm();
+                }}
+            />
         </div>
     );
 };
