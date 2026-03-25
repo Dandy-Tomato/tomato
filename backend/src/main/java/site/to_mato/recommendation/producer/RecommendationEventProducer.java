@@ -15,26 +15,29 @@ public class RecommendationEventProducer {
     private final KafkaTemplate<String, ActionLogEvent> kafkaTemplate;
 
     public void publishActionLog(ActionLogEvent event) {
-
         String key = String.valueOf(event.actorUserId());
 
-        kafkaTemplate.send(
-                RecommendationEventTopics.ACTION_LOG,
-                key,
-                event
-        ).whenComplete((result, ex) -> {
+        try {
+            kafkaTemplate.send(
+                    RecommendationEventTopics.ACTION_LOG,
+                    key,
+                    event
+            ).whenComplete((result, ex) -> {
+                if (ex != null) {
+                    log.error("Kafka publish failed. event={}", event, ex);
+                    return;
+                }
 
-            if (ex != null) {
-                log.error("Kafka publish failed. event={}", event, ex);
-                return;
-            }
-
-            log.info(
-                    "Kafka publish success. topic={}, partition={}, offset={}",
-                    result.getRecordMetadata().topic(),
-                    result.getRecordMetadata().partition(),
-                    result.getRecordMetadata().offset()
-            );
-        });
+                log.info(
+                        "Kafka publish success. topic={}, partition={}, offset={}",
+                        result.getRecordMetadata().topic(),
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset()
+                );
+            });
+        } catch (Exception e) {
+            log.error("Kafka send invocation failed before callback. event={}", event, e);
+            throw e;
+        }
     }
 }

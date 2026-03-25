@@ -1,8 +1,9 @@
 from __future__ import annotations
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 import logging
+
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,6 @@ CANDIDATE_K_MULTIPLIER = 5
 
 
 class RecommendationRepository:
-
     def __init__(self, db: Session):
         self.db = db
 
@@ -40,16 +40,15 @@ class RecommendationRepository:
         if preference_embedding is not None:
             return self._find_topics_with_embedding(
                 project_id=project_id,
-                domain_ids=domain_ids,
                 top_k=top_k,
                 preference_embedding=preference_embedding,
             )
-        else:
-            return self._find_topics_cold_start(
-                project_id=project_id,
-                domain_ids=domain_ids,
-                top_k=top_k,
-            )
+
+        return self._find_topics_cold_start(
+            project_id=project_id,
+            domain_ids=domain_ids,
+            top_k=top_k,
+        )
 
     # ── 웜스타트: 임베딩 + 도메인/스킬 가중치 복합 점수 ─────────────────────
     def _find_topics_with_embedding(
@@ -58,9 +57,12 @@ class RecommendationRepository:
         top_k: int,
         preference_embedding: list[float],
     ) -> list[dict]:
-
         candidate_k = top_k * CANDIDATE_K_MULTIPLIER
-        logger.info(f"[웜스타트 쿼리] project_id={project_id}, candidate_k={candidate_k}, top_k={top_k}")
+        logger.info(
+            f"[웜스타트 쿼리] project_id={project_id}, candidate_k={candidate_k}, top_k={top_k}"
+        )
+
+        embedding_str = "[" + ",".join(map(str, preference_embedding)) + "]"
 
         query = text("""
             WITH candidate_topics AS (
@@ -72,14 +74,15 @@ class RecommendationRepository:
                     t.description,
                     t.expected_duration_week,
                     t.recommended_team_size,
+                    t.difficulty,
                     t.domain_id,
                     d.name AS domain_name,
                     t.source_repo_id,
-                    1 - (t.topic_embedding <=> :preference_embedding::vector) AS embedding_score
+                    1 - (t.topic_embedding <=> CAST(:preference_embedding AS vector)) AS embedding_score
                 FROM topics t
                 LEFT JOIN domains d ON d.domain_id = t.domain_id
                 WHERE t.topic_embedding IS NOT NULL
-                ORDER BY t.topic_embedding <=> :preference_embedding::vector ASC
+                ORDER BY t.topic_embedding <=> CAST(:preference_embedding AS vector) ASC
                 LIMIT :candidate_k
             ),
             domain_scores AS (
@@ -91,7 +94,7 @@ class RecommendationRepository:
                 FROM candidate_topics ct
                 LEFT JOIN project_domains pd
                     ON pd.project_id = :project_id
-                   AND pd.domain_id  = ct.domain_id
+                   AND pd.domain_id = ct.domain_id
             ),
             skill_scores AS (
                 -- 3단계: 프로젝트 스킬 가중치 합산
@@ -101,10 +104,10 @@ class RecommendationRepository:
                     COALESCE(SUM(ps.weight), 0) AS skill_score
                 FROM candidate_topics ct
                 LEFT JOIN topic_skills ts
-                    ON ts.topic_id  = ct.topic_id
+                    ON ts.topic_id = ct.topic_id
                 LEFT JOIN project_skills ps
                     ON ps.project_id = :project_id
-                   AND ps.skill_id   = ts.skill_id
+                   AND ps.skill_id = ts.skill_id
                 GROUP BY ct.topic_id
             ),
             topic_skills_agg AS (
@@ -117,7 +120,7 @@ class RecommendationRepository:
                     ) AS skills
                 FROM candidate_topics ct
                 LEFT JOIN topic_skills ts ON ts.topic_id = ct.topic_id
-                LEFT JOIN skills s        ON s.skill_id  = ts.skill_id
+                LEFT JOIN skills s ON s.skill_id = ts.skill_id
                 GROUP BY ct.topic_id
             )
             SELECT
@@ -140,20 +143,23 @@ class RecommendationRepository:
                     + ss.skill_score
                 ) AS final_score
             FROM candidate_topics ct
-            LEFT JOIN domain_scores    ds  ON ds.topic_id  = ct.topic_id
-            LEFT JOIN skill_scores     ss  ON ss.topic_id  = ct.topic_id
+            LEFT JOIN domain_scores ds ON ds.topic_id = ct.topic_id
+            LEFT JOIN skill_scores ss ON ss.topic_id = ct.topic_id
             LEFT JOIN topic_skills_agg tsa ON tsa.topic_id = ct.topic_id
             ORDER BY final_score DESC
             LIMIT :top_k
         """)
 
         rows = (
-            self.db.execute(query, {
-                "preference_embedding": preference_embedding,
-                "project_id":           project_id,
-                "candidate_k":          candidate_k,
-                "top_k":                top_k,
-            })
+            self.db.execute(
+                query,
+                {
+                    "preference_embedding": embedding_str,
+                    "project_id": project_id,
+                    "candidate_k": candidate_k,
+                    "top_k": top_k,
+                },
+            )
             .mappings()
             .all()
         )
@@ -169,8 +175,9 @@ class RecommendationRepository:
         domain_ids: list[int],
         top_k: int,
     ) -> list[dict]:
-
-        logger.info(f"[콜드스타트 쿼리] project_id={project_id}, domain_ids={domain_ids}, top_k={top_k}")
+        logger.info(
+            f"[콜드스타트 쿼리] project_id={project_id}, domain_ids={domain_ids}, top_k={top_k}"
+        )
 
         query = text("""
             WITH domain_scores AS (
@@ -180,7 +187,7 @@ class RecommendationRepository:
                 FROM topics t
                 LEFT JOIN project_domains pd
                     ON pd.project_id = :project_id
-                   AND pd.domain_id  = t.domain_id
+                   AND pd.domain_id = t.domain_id
             ),
             skill_scores AS (
                 SELECT
@@ -188,10 +195,10 @@ class RecommendationRepository:
                     COALESCE(SUM(ps.weight), 0) AS skill_score
                 FROM topics t
                 LEFT JOIN topic_skills ts
-                    ON ts.topic_id  = t.topic_id
+                    ON ts.topic_id = t.topic_id
                 LEFT JOIN project_skills ps
                     ON ps.project_id = :project_id
-                   AND ps.skill_id   = ts.skill_id
+                   AND ps.skill_id = ts.skill_id
                 GROUP BY t.topic_id
             ),
             topic_skills_agg AS (
@@ -203,7 +210,7 @@ class RecommendationRepository:
                     ) AS skills
                 FROM topics t
                 LEFT JOIN topic_skills ts ON ts.topic_id = t.topic_id
-                LEFT JOIN skills s        ON s.skill_id = ts.skill_id
+                LEFT JOIN skills s ON s.skill_id = ts.skill_id
                 GROUP BY t.topic_id
             )
             SELECT
@@ -225,10 +232,10 @@ class RecommendationRepository:
                     + ss.skill_score
                 ) AS final_score
             FROM topics t
-            LEFT JOIN domains          d   ON d.domain_id    = t.domain_id
-            LEFT JOIN domain_scores    ds  ON ds.topic_id    = t.topic_id
-            LEFT JOIN skill_scores     ss  ON ss.topic_id    = t.topic_id
-            LEFT JOIN topic_skills_agg tsa ON tsa.topic_id   = t.topic_id
+            LEFT JOIN domains d ON d.domain_id = t.domain_id
+            LEFT JOIN domain_scores ds ON ds.topic_id = t.topic_id
+            LEFT JOIN skill_scores ss ON ss.topic_id = t.topic_id
+            LEFT JOIN topic_skills_agg tsa ON tsa.topic_id = t.topic_id
             -- 콜드스타트는 domain_ids로 1차 필터 후 점수 정렬
             WHERE t.domain_id = ANY(:domain_ids)
             ORDER BY final_score DESC
@@ -236,11 +243,14 @@ class RecommendationRepository:
         """)
 
         rows = (
-            self.db.execute(query, {
-                "project_id":    project_id,
-                "domain_ids":    domain_ids,
-                "top_k":         top_k,
-            })
+            self.db.execute(
+                query,
+                {
+                    "project_id": project_id,
+                    "domain_ids": domain_ids,
+                    "top_k": top_k,
+                },
+            )
             .mappings()
             .all()
         )

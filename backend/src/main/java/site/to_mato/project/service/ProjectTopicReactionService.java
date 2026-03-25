@@ -13,6 +13,7 @@ import site.to_mato.project.dto.response.ProjectTopicReactionResponse;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectTopicReaction;
 import site.to_mato.project.entity.enums.Reaction;
+import site.to_mato.project.repository.ProjectMemberRepository;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.project.repository.ProjectTopicReactionRepository;
 import site.to_mato.recommendation.entity.enums.ActionType;
@@ -29,6 +30,7 @@ public class ProjectTopicReactionService {
     private final TopicRepository topicRepository;
     private final ActionLogService actionLogService;
     private final ProjectRepository projectRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final ProjectTopicReactionRepository reactionRepository;
 
     @Transactional
@@ -38,6 +40,10 @@ public class ProjectTopicReactionService {
             Long topicId,
             ReactionRequest request
     ) {
+        if (!projectMemberRepository.existsByProject_IdAndUser_Id(projectId, actorUserId)) {
+            throw new BusinessException(ErrorCode.NOT_PROJECT_MEMBER);
+        }
+
         Reaction reaction = request.reaction();
         Long version = request.version();
 

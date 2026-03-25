@@ -1,6 +1,7 @@
 package site.to_mato.recommendation.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -13,6 +14,7 @@ import site.to_mato.recommendation.producer.RecommendationEventProducer;
 import site.to_mato.recommendation.repository.ActionLogProcessRepository;
 import site.to_mato.recommendation.repository.ActionLogRepository;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ActionLogService {
@@ -28,7 +30,6 @@ public class ActionLogService {
             Long topicId,
             ActionType actionType
     ) {
-
         ActionLog actionLog = ActionLog.of(
                 actorUserId,
                 projectId,
@@ -47,7 +48,11 @@ public class ActionLogService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                recommendationEventProducer.publishActionLog(event);
+                try {
+                    recommendationEventProducer.publishActionLog(event);
+                } catch (Exception e) {
+                    log.error("afterCommit Kafka publish failed. event={}", event, e);
+                }
             }
         });
 
