@@ -180,7 +180,11 @@ const MainPage = () => {
                         <>
                             <div className="project-grid">
                                 {projects.map(project => (
-                                    <div key={project?.projectId || Math.random()} className="project-card">
+                                    <div
+                                        key={project?.projectId || Math.random()}
+                                        className="project-card"
+                                        onClick={() => handleProjectDetail(project.projectId)}
+                                    >
                                         <h3 className="card-title">{project?.name || '제목 없음'}</h3>
                                         <p className="card-date">
                                             {(project?.startedAt || '').toString().replace(/-/g, '.')} ~ {(project?.dueAt || '').toString().replace(/-/g, '.')}
@@ -194,17 +198,16 @@ const MainPage = () => {
                                                 <MdCalendarToday className="stat-icon" /> {calculateWeeks(project.startedAt, project.dueAt)}주
                                             </span>
                                         </div>
-                                        <button className="card-detail-btn" onClick={() => handleProjectDetail(project.projectId)}>
-                                            자세히 보기
-                                        </button>
                                     </div>
                                 ))}
                             </div>
-                            <div className="discovery-footer">
-                                <button className="discovery-more-btn">
-                                    <MdAdd className="btn-icon" /> 더보기
-                                </button>
-                            </div>
+                            {projects.length >= 4 && (
+                                <div className="discovery-footer">
+                                    <button className="discovery-more-btn">
+                                        <MdAdd className="btn-icon" /> 더보기
+                                    </button>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="empty-project">

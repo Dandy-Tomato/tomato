@@ -201,12 +201,27 @@
 }
 
 .edit-link {
-    background: none;
-    border: none;
-    color: #ff6b6b;
-    font-weight: 600;
+    background-color: #fff4f2;
+    border: 1px solid #ffd8d1;
+    padding: 12px 30px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ee7c62;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
-    text-decoration: underline;
+    transition: all 0.2s;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(238, 124, 98, 0.1);
+}
+
+.edit-link:hover {
+    background-color: #ee7c62;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(238, 124, 98, 0.2);
 }
 
 .submit-button {
