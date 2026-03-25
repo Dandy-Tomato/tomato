@@ -6,10 +6,12 @@ import SignupPage from './SignupPage';
 import ProfilePage from './ProfilePage';
 import ProjectCreatePage from './ProjectCreatePage';
 import ProjectDetailPage from './ProjectDetailPage';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
     return (
         <Router>
+            <ScrollToTop />
             <div className="App">
                 <Routes>
                     <Route path="/" element={<LoginPage />} />
