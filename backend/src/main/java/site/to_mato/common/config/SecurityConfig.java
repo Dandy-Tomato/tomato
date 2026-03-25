@@ -60,7 +60,8 @@ public class SecurityConfig {
                                 "/auth/refresh",
                                 "/oauth2/**",
                                 "/login/**",
-                                "/health/**"
+                                "/health/**",
+                                "/companies/**"
                         ).permitAll()
                         .requestMatchers(
                                 "/auth/logout",
