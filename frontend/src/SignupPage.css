@@ -1,0 +1,353 @@
+.signup-page-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f3f4f6;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 20px;
+}
+
+.signup-card {
+    width: 100%;
+    max-width: 600px;
+    background-color: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    padding: 30px 40px;
+    /* Reduced vertical padding */
+    display: flex;
+    flex-direction: column;
+}
+
+.signup-title {
+    font-size: 1.8rem;
+    /* Slightly reduced */
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.signup-subtitle {
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin-bottom: 30px;
+    /* Reduced margin */
+}
+
+/* Stepper Styles */
+.stepper-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    /* Reduced margin from 50px */
+    position: relative;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1;
+    width: 70px;
+}
+
+.step-circle {
+    width: 44px;
+    /* Reduced from 54px */
+    height: 44px;
+    /* Reduced from 54px */
+    border-radius: 50%;
+    background-color: #e5e7eb;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.step-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+
+.step-item.active .step-circle {
+    background-color: #E57358;
+    box-shadow: 0 4px 12px rgba(229, 115, 88, 0.3);
+}
+
+.step-item.active .step-label {
+    color: #E57358;
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background-color: #e5e7eb;
+    margin: 0 -10px 24px -10px;
+}
+
+/* Form Styles */
+.signup-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    /* Reduced gap from 25px */
+    margin-bottom: 30px;
+    /* Reduced margin from 40px */
+}
+
+.signup-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.signup-form-group label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.required-star {
+    color: #E57358;
+    margin-left: 3px;
+}
+
+.input-with-button {
+    display: flex;
+    gap: 12px;
+}
+
+/* 입력창 공통 래퍼 */
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0 18px;
+    height: 52px;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.input-with-button .input-wrapper {
+    flex: 1;
+}
+
+.input-wrapper:focus-within {
+    border-color: #E57358;
+    box-shadow: 0 0 0 2px rgba(229, 115, 88, 0.1);
+}
+
+.input-icon {
+    color: #9ca3af;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.input-icon-clickable {
+    color: #9ca3af;
+    margin-left: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s;
+}
+
+.input-icon-clickable:hover {
+    color: #4b5563;
+}
+
+.input-wrapper input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    padding: 0 !important;
+    font-size: 1rem;
+    color: #111827;
+    width: 100%;
+    height: 100% !important;
+    box-shadow: none !important;
+}
+
+.input-wrapper input::placeholder {
+    color: #9ca3af;
+}
+
+.input-wrapper.input-error {
+    border-color: #ef4444;
+}
+
+.input-wrapper.input-success {
+    border-color: #10b981;
+}
+
+.check-button {
+    width: 130px;
+    height: 52px;
+    background-color: #E57358;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-sizing: border-box;
+}
+
+.check-button:hover {
+    background-color: #d15a41;
+}
+
+/* Tag System */
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.tag-item {
+    display: flex;
+    align-items: center;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.9rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+.tag-close {
+    margin-left: 8px;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 0.8rem;
+}
+
+.tag-close:hover {
+    color: #ef4444;
+}
+
+/* Position Grid */
+.position-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.position-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    /* Reduced from 16px */
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background-color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.position-item:hover {
+    border-color: #E57358;
+    background-color: #fef2f2;
+}
+
+.position-item.active {
+    border-color: #E57358;
+    background-color: #fef2f2;
+    box-shadow: 0 0 0 1px #E57358;
+}
+
+.position-item.active .position-name {
+    color: #E57358;
+    font-weight: 700;
+}
+
+.position-icon {
+    font-size: 1.4rem;
+    /* Reduced from 1.8rem */
+    margin-bottom: 6px;
+}
+
+.position-name {
+    font-size: 0.85rem;
+    /* Reduced from 0.9rem */
+    color: #374151;
+    font-weight: 500;
+}
+
+/* Search Dropdown */
+.search-results {
+    position: absolute;
+    top: 54px;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.result-item {
+    padding: 12px 18px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #374151;
+}
+
+.result-item:hover {
+    background-color: #f3f4f6;
+    color: #E57358;
+}
+
+.next-button {
+    width: 100%;
+    height: 56px;
+    background-color: #E57358;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 20px;
+}
+
+.next-button:hover {
+    background-color: #d15a41;
+    transform: translateY(-1px);
+}
+
+.error-message {
+    font-size: 0.85rem;
+    color: #ef4444;
+    margin-top: 6px;
+}
+
+.success-message {
+    font-size: 0.85rem;
+    color: #10b981;
+    margin-top: 6px;
+}
+
+.relative {
+    position: relative;
+}

@@ -24,7 +24,7 @@
 /* 왼쪽 브랜딩 영역 */
 .login-left {
   flex: 1;
-  background: linear-gradient(135deg, #ffe5e0 0%, #fdf2f2 100%);
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -192,9 +192,40 @@
   margin-left: 1em;
 }
 
+/* 소셜 버튼 영역 */
+.social-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* 구글 버튼 */
+.google-button {
+  flex: 1;
+  height: 48px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.google-button:hover {
+  background-color: #f9fafb;
+}
+
+.google-button svg {
+  margin-right: 10px;
+}
+
 /* 깃허브 버튼 */
 .github-button {
-  width: 100%;
+  flex: 1;
   height: 48px;
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
@@ -225,13 +256,14 @@
   color: #6b7280;
 }
 
-.signup-text a {
+.signup-text .signup-link {
   color: #ea580c;
   font-weight: 700;
   text-decoration: none;
   margin-left: 6px;
+  cursor: pointer;
 }
 
-.signup-text a:hover {
+.signup-text .signup-link:hover {
   text-decoration: underline;
 }
