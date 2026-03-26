@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import random
+from datetime import datetime
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -10,6 +12,9 @@ logger = logging.getLogger(__name__)
 # ── 상수 ──────────────────────────────────────────────────
 # top_k의 몇 배를 후보로 추릴지
 CANDIDATE_K_MULTIPLIER = 5
+
+# 반환 목록을 몇 개 단위로 묶어서 섞을지
+SHUFFLE_GROUP_SIZE = 7
 
 # domain_score / skill_score:
 #   action_type.weight 기반으로 행동 발생 시마다 누적 합산되는 값
@@ -50,6 +55,38 @@ class RecommendationRepository:
             top_k=top_k,
         )
 
+    def _shuffle_within_groups(
+        self,
+        items: list[dict],
+        project_id: int,
+        top_k: int,
+    ) -> list[dict]:
+        """
+        전체 순서는 유지하되, 일정 개수(group) 단위로만 내부 순서를 섞는다.
+        예: 21개 결과를 7개씩 나누어 [1~7], [8~14], [15~21] 그룹 내부만 셔플
+        """
+        if not items:
+            return items
+
+        # 혹시 모르니 먼저 점수 기준으로 정렬
+        items.sort(key=lambda x: x["final_score"], reverse=True)
+
+        # 최종 반환 대상까지만 자른 뒤 그룹 셔플
+        items = items[:top_k]
+
+        # 하루 단위 고정 시드
+        date_key = datetime.now().strftime("%Y-%m-%d")
+        rng = random.Random()
+
+        grouped_result: list[dict] = []
+
+        for start in range(0, len(items), SHUFFLE_GROUP_SIZE):
+            group = items[start:start + SHUFFLE_GROUP_SIZE]
+            rng.shuffle(group)
+            grouped_result.extend(group)
+
+        return grouped_result
+
     # ── 웜스타트: 임베딩 + 도메인/스킬 가중치 복합 점수 ─────────────────────
     def _find_topics_with_embedding(
         self,
@@ -86,8 +123,6 @@ class RecommendationRepository:
                 LIMIT :candidate_k
             ),
             domain_scores AS (
-                -- 2단계: 프로젝트 도메인 가중치 매핑
-                -- 프로젝트가 선호하지 않는 도메인은 0점 처리
                 SELECT
                     ct.topic_id,
                     COALESCE(pd.weight, 0) AS domain_score
@@ -97,8 +132,6 @@ class RecommendationRepository:
                    AND pd.domain_id = ct.domain_id
             ),
             skill_scores AS (
-                -- 3단계: 프로젝트 스킬 가중치 합산
-                -- action_type.weight 누적값이므로 정규화 없이 그대로 합산
                 SELECT
                     ct.topic_id,
                     COALESCE(SUM(ps.weight), 0) AS skill_score
@@ -111,7 +144,6 @@ class RecommendationRepository:
                 GROUP BY ct.topic_id
             ),
             topic_skills_agg AS (
-                -- 스킬명 목록 집계 (점수 계산과 별개 — 응답용)
                 SELECT
                     ct.topic_id,
                     COALESCE(
@@ -147,7 +179,7 @@ class RecommendationRepository:
             LEFT JOIN skill_scores ss ON ss.topic_id = ct.topic_id
             LEFT JOIN topic_skills_agg tsa ON tsa.topic_id = ct.topic_id
             ORDER BY final_score DESC
-            LIMIT :top_k
+            LIMIT :candidate_k
         """)
 
         rows = (
@@ -157,7 +189,6 @@ class RecommendationRepository:
                     "preference_embedding": embedding_str,
                     "project_id": project_id,
                     "candidate_k": candidate_k,
-                    "top_k": top_k,
                 },
             )
             .mappings()
@@ -165,6 +196,12 @@ class RecommendationRepository:
         )
 
         result = [dict(row) for row in rows]
+        result = self._shuffle_within_groups(
+            items=result,
+            project_id=project_id,
+            top_k=top_k,
+        )
+
         logger.info(f"[웜스타트 쿼리 완료] 건수={len(result)}")
         return result
 
@@ -175,8 +212,9 @@ class RecommendationRepository:
         domain_ids: list[int],
         top_k: int,
     ) -> list[dict]:
+        candidate_k = top_k * CANDIDATE_K_MULTIPLIER
         logger.info(
-            f"[콜드스타트 쿼리] project_id={project_id}, domain_ids={domain_ids}, top_k={top_k}"
+            f"[콜드스타트 쿼리] project_id={project_id}, domain_ids={domain_ids}, candidate_k={candidate_k}, top_k={top_k}"
         )
 
         query = text("""
@@ -236,10 +274,9 @@ class RecommendationRepository:
             LEFT JOIN domain_scores ds ON ds.topic_id = t.topic_id
             LEFT JOIN skill_scores ss ON ss.topic_id = t.topic_id
             LEFT JOIN topic_skills_agg tsa ON tsa.topic_id = t.topic_id
-            -- 콜드스타트는 domain_ids로 1차 필터 후 점수 정렬
             WHERE t.domain_id = ANY(:domain_ids)
             ORDER BY final_score DESC
-            LIMIT :top_k
+            LIMIT :candidate_k
         """)
 
         rows = (
@@ -248,7 +285,7 @@ class RecommendationRepository:
                 {
                     "project_id": project_id,
                     "domain_ids": domain_ids,
-                    "top_k": top_k,
+                    "candidate_k": candidate_k,
                 },
             )
             .mappings()
@@ -256,5 +293,11 @@ class RecommendationRepository:
         )
 
         result = [dict(row) for row in rows]
+        result = self._shuffle_within_groups(
+            items=result,
+            project_id=project_id,
+            top_k=top_k,
+        )
+
         logger.info(f"[콜드스타트 쿼리 완료] 건수={len(result)}")
         return result
