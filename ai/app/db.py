@@ -14,9 +14,19 @@ engine = create_engine(
     },
 )
 
+
 @event.listens_for(engine, "connect")
-def _register_pgvector(dbapi_connection, _connection_record):
+def _on_connect(dbapi_connection, _connection_record):
     register_vector(dbapi_connection)
+
+    prev_autocommit = dbapi_connection.autocommit
+    try:
+        dbapi_connection.autocommit = True
+        with dbapi_connection.cursor() as cursor:
+            cursor.execute("SET TIME ZONE 'Asia/Seoul'")
+    finally:
+        dbapi_connection.autocommit = prev_autocommit
+
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -24,6 +34,7 @@ SessionLocal = sessionmaker(
     autocommit=False,
     expire_on_commit=False,
 )
+
 
 def get_db():
     db = SessionLocal()
