@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 public class ProjectProfileService {
 
     private static final double MEMBER_WEIGHT = 1.0;
-    private static final double SELECTED_WEIGHT = 3.0;
+    private static final double SELECTED_WEIGHT = 2.0;
 
     private final CompanySkillRepository companySkillRepository;
     private final ProjectSkillRepository projectSkillRepository;
