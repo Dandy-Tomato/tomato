@@ -11,6 +11,7 @@ import site.to_mato.common.response.ApiResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import site.to_mato.topic.dto.response.ChildTopicDetailResponse;
 import site.to_mato.topic.dto.response.RefinedTopicResponse;
+import site.to_mato.llm.prompt.option.TopicOption;
 import site.to_mato.topic.service.ChildTopicService;
 
 @RestController
@@ -19,20 +20,14 @@ import site.to_mato.topic.service.ChildTopicService;
 public class ChildTopicController {
     private final ChildTopicService childTopicService;
 
-    @PostMapping("/refine/{topicId}")
+    @PostMapping("/refine/{topicId}/{option}")
     public ApiResponse<RefinedTopicResponse> refineTopic(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long projectId,
-            @PathVariable Long topicId
+            @PathVariable Long topicId,
+            @PathVariable TopicOption option
     ) {
-        RefinedTopicResponse response = childTopicService.refineTopic(userId, projectId, topicId);
-        return ApiResponse.ok(response);
-    }
-
-    @PostMapping("/refine/mock")
-    public ApiResponse<String> refineTopic(
-    ) {
-        String response = childTopicService.refineMockTopic();
+        RefinedTopicResponse response = childTopicService.refineTopic(userId, projectId, topicId, option);
         return ApiResponse.ok(response);
     }
 

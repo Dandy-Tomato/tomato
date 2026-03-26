@@ -1,4 +1,4 @@
-package site.to_mato.topic.service;
+package site.to_mato.llm.parser;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
