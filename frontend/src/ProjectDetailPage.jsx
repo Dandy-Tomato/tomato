@@ -14,6 +14,12 @@ import ReactMarkdown from 'react-markdown';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+const REFINE_OPTIONS = [
+    { label: '기술 도전형', value: 'TECH_CHALLENGE' },
+    { label: '실용 서비스형', value: 'PRACTICAL_SERVICE' },
+    { label: '아이디어형', value: 'CREATIVE_IDEA' },
+    { label: '포트폴리오형', value: 'PORTFOLIO_IMPACT' }
+];
 
 // 주제 상세 보기 컴포넌트
 const TopicDetailView = ({
@@ -25,7 +31,6 @@ const TopicDetailView = ({
     getDomainName,
     getSkillName,
     onRefine,
-    isRefined, // state from parent if needed, but we use topic.childTopics
     isRefining,
     confirmedChildTopicId,
     onConfirmTopic,
@@ -33,6 +38,7 @@ const TopicDetailView = ({
     isOwner
 }) => {
     const [expandedChildId, setExpandedChildId] = useState(null);
+    const [selectedOption, setSelectedOption] = useState(null);
 
     if (isLoading || !topic) return <div className="topic-detail-loading">데이터를 불러오는 중...</div>;
 
@@ -103,13 +109,24 @@ const TopicDetailView = ({
             {/* 이동 및 구체화 버튼 섹션 */}
             <div className="topic-nav-actions">
                 <p className="nav-info-text">마음에 드신다면 AI로 주제를 더 구체화해보세요!</p>
+                <div className="refine-options-container">
+                    {REFINE_OPTIONS.map(opt => (
+                        <button 
+                            key={opt.value}
+                            className={`refine-option-tag ${selectedOption === opt.value ? 'active' : ''}`}
+                            onClick={() => setSelectedOption(selectedOption === opt.value ? null : opt.value)}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
                 <div className="nav-buttons">
                     <button className="back-to-list-btn" onClick={onBack}>
                         <MdArrowBack className="btn-icon" /> 목록으로
                     </button>
                     <button
                         className="elaborate-btn"
-                        onClick={() => onRefine(topic.topicId)}
+                        onClick={() => onRefine(topic.topicId, selectedOption)}
                         disabled={isRefining}
                     >
                         <MdAutoAwesome className="btn-icon" /> {isRefining ? '생성 중...' : '구체화하기'}
@@ -176,7 +193,7 @@ const TopicDetailView = ({
                     </div>
 
                     <div className="elab-footer">
-                        <button className="re-elaborate-btn" onClick={() => onRefine(topic.topicId)} disabled={isRefining}>
+                        <button className="re-elaborate-btn" onClick={() => onRefine(topic.topicId, selectedOption)} disabled={isRefining}>
                             <MdRefresh className="btn-icon" /> {isRefining ? '생성 중...' : '추가 구체화'}
                         </button>
                     </div>
@@ -365,11 +382,12 @@ const ProjectDetailPage = () => {
         }
     };
 
-    const handleRefine = async (topicId) => {
+    const handleRefine = async (topicId, option = null) => {
         setIsRefining(true);
         const token = localStorage.getItem("accessToken");
         try {
-            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/refine/${topicId}`, {
+            const queryParam = option ? `?option=${option}` : '';
+            const response = await fetch(`${API_BASE_URL}/projects/${projectId}/refine/${topicId}${queryParam}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
