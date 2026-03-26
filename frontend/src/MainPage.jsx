@@ -201,13 +201,6 @@ const MainPage = () => {
                                     </div>
                                 ))}
                             </div>
-                            {projects.length >= 4 && (
-                                <div className="discovery-footer">
-                                    <button className="discovery-more-btn">
-                                        <MdAdd className="btn-icon" /> 더보기
-                                    </button>
-                                </div>
-                            )}
                         </>
                     ) : (
                         <div className="empty-project">

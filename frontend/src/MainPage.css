@@ -210,51 +210,6 @@
     background-color: #fff5f5;
 }
 
-/* Discovery Footer */
-.discovery-footer {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 40px;
-    padding-bottom: 60px;
-}
-
-.footer-line {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 1px;
-    background-color: #e0e0e0;
-    z-index: 1;
-}
-
-.discovery-more-btn {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 24px;
-    background-color: #ffffff;
-    border: 1px solid #eee;
-    border-radius: 25px;
-    font-size: 13px;
-    color: #888;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.discovery-more-btn:hover {
-    background-color: #f8f9fa;
-    border-color: #ccc;
-}
-
-.btn-icon {
-    font-size: 18px;
-}
 
 /* Empty State */
 .empty-project {

@@ -772,22 +772,55 @@
 .topic-nav-actions {
     background-color: #ffffff;
     border-radius: 16px;
-    padding: 20px 32px;
+    padding: 28px 32px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 16px;
     border: 1px solid #f0f0f0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
 }
 
 .nav-info-text {
-    font-size: 14px;
+    font-size: 15px;
     color: #333;
+    font-weight: 700;
+}
+
+.refine-options-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.refine-option-tag {
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #666;
     font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.refine-option-tag:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-1px);
+}
+
+.refine-option-tag.active {
+    background-color: #fff4f2;
+    border-color: #ee7c62;
+    color: #ee7c62;
+    box-shadow: 0 4px 10px rgba(238, 124, 98, 0.1);
 }
 
 .nav-buttons {
     display: flex;
+    justify-content: flex-end;
     gap: 12px;
+    margin-top: 4px;
 }
 
 .back-to-list-btn, .re-elaborate-btn {
@@ -1166,6 +1199,76 @@
 .child-topic-item.confirmed {
     border-color: #ee7c62;
     border-width: 2px;
+}
+
+/* Markdown Rendering Styles */
+.markdown-body {
+    line-height: 1.6;
+    color: #444;
+    font-size: 14px;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 800;
+    color: #222;
+}
+
+.markdown-body h1 { 
+    font-size: 1.6em; 
+    border-bottom: 2px solid #f0f0f0; 
+    padding-bottom: 0.5em; 
+}
+.markdown-body h2 { font-size: 1.4em; }
+.markdown-body h3 { font-size: 1.2em; }
+
+.markdown-body p { margin-bottom: 16px; }
+
+.markdown-body ul, .markdown-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+}
+
+.markdown-body li { 
+    margin-bottom: 6px; 
+}
+
+.markdown-body code {
+    background-color: #f1f3f5;
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+    font-size: 90%;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: #e83e8c;
+}
+
+.markdown-body pre {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.markdown-body pre code {
+    background-color: transparent;
+    padding: 0;
+    color: #333;
+    font-size: 13px;
+}
+
+.markdown-body strong {
+    color: #333;
+    font-weight: 700;
+}
+
+.markdown-body blockquote {
+    padding-left: 16px;
+    border-left: 4px solid #ee7c62;
+    color: #666;
+    margin: 16px 0;
 }
 
 
