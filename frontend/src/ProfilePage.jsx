@@ -107,53 +107,16 @@ const ProfilePage = () => {
             if (response.ok && result.data) {
                 const data = result.data;
 
-                // 직무 정보 파싱 (다양한 필드명 및 데이터 구조 대응)
-                const rawPos = data.position || data.positionId || data.job || data.position_id;
-                let posId = null;
+                // 직무 정보 파싱 (새 스펙: position이 정수형 ID로 옴)
+                const posId = (data.position !== undefined && data.position !== null) ? Number(data.position) : 
+                              (data.positionId || data.job || data.position_id);
                 
-                if (rawPos) {
-                    if (typeof rawPos === 'object' && !Array.isArray(rawPos)) {
-                        posId = Number(rawPos.id || rawPos.positionId || 0);
-                    } else {
-                        // DB명(frontend), 한글명, 혹은 ID값과 매칭 시도
-                        const found = POSITIONS.find(p => 
-                            p.dbName === rawPos || 
-                            p.name === rawPos || 
-                            String(p.id) === String(rawPos)
-                        );
-                        if (found) posId = Number(found.id);
-                        else if (!isNaN(rawPos)) posId = Number(rawPos);
-                    }
-                }
-
-                console.log("Full data from Profile API:", data);
-                console.log("companyNames from API:", data.companyNames);
-                
-                // 기업 정보 체계적 파싱
-                const rawIds = data.companyIds || data.company_ids || [];
-                const rawNames = data.companyNames || data.companyNameList || data.company_names || [];
+                // 기업 정보 파싱 (새 스펙: companies: [{id, name}, ...])
                 const rawCompanies = data.companies || [];
-
-                let finalCompanies = [];
-
-                if (rawCompanies.length > 0 && typeof rawCompanies[0] === 'object') {
-                    // 1. 객체 배열 형태 ([{id:1, name:'삼성'}, ...])
-                    finalCompanies = rawCompanies.map(c => ({
-                        id: c.id != null ? Number(c.id) : null,
-                        name: c.name || c.companyName || `기업 ${c.id}`
-                    }));
-                } else if (rawNames.length > 0 || rawIds.length > 0) {
-                    // 2. names 배열 기준, IDs 기준 인덱스 매핑
-                    const len = Math.max(rawNames.length, rawIds.length);
-                    for (let i = 0; i < len; i++) {
-                        const name = rawNames[i] || null;
-                        const rawId = rawIds[i];
-                        const id = (rawId != null && !isNaN(Number(rawId))) ? Number(rawId) : null;
-                        if (name || id) {
-                            finalCompanies.push({ id, name: name || `기업 ${id}` });
-                        }
-                    }
-                }
+                const finalCompanies = rawCompanies.map(c => ({
+                    id: c.id != null ? Number(c.id) : (c.companyId != null ? Number(c.companyId) : null),
+                    name: c.name || c.companyName || `기업 ${c.id || c.companyId}`
+                }));
 
                 setProfile({
                     email: data.email || '',
@@ -188,12 +151,11 @@ const ProfilePage = () => {
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
-            position: profile.positionId ? Number(profile.positionId) : null,
             positionId: profile.positionId ? Number(profile.positionId) : null,
             companyIds: profile.companies
-                .filter(c => c.id != null && !isNaN(Number(c.id)))
-                .map(c => Number(c.id)),
-            companyNames: profile.companies.map(c => c.name).filter(Boolean),
+                .map(c => c.id || c.companyId)
+                .filter(id => id !== undefined && id !== null && !isNaN(Number(id)))
+                .map(id => Number(id)),
             skillIds: profile.skillIds.map(id => Number(id))
         };
 
@@ -245,12 +207,16 @@ const ProfilePage = () => {
     };
 
     const addCompany = (company) => {
+        if (!company) return;
+        const cId = company.id || company.companyId;
+        const cName = company.name || company.companyName;
+
         setProfile(prev => {
             const already = prev.companies.some(c =>
-                (company.id && c.id === company.id) || (c.name === company.name)
+                (cId && (c.id === cId || c.companyId === cId)) || (cName && (c.name === cName || c.companyName === cName))
             );
             if (already) return prev;
-            return { ...prev, companies: [...prev.companies, { id: company.id, name: company.name }] };
+            return { ...prev, companies: [...prev.companies, { id: cId, name: cName }] };
         });
         setCompanySearch('');
         setCompanyResults([]);
