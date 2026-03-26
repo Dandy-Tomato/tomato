@@ -3,6 +3,7 @@ package site.to_mato.project.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.common.exception.BusinessException;
@@ -36,7 +37,11 @@ public class ProjectQueryService {
     public Page<MyProjectSummaryResponse> getMyProjects(Long userId, int page, int size) {
         validateUserExists(userId);
 
-        PageRequest pageRequest = PageRequest.of(page, size);
+        PageRequest pageRequest = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "project.updatedAt")
+        );
 
         Page<ProjectMember> projectMembers =
                 projectMemberRepository.findAllByUser_Id(
