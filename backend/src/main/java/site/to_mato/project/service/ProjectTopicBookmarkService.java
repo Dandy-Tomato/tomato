@@ -28,16 +28,32 @@ public class ProjectTopicBookmarkService {
                 .findByProject_IdAndTopic_Id(projectId, topicId)
                 .orElse(null);
 
+        // 1. 삭제 (취소)
         if (bookmark != null) {
             bookmarkRepository.delete(bookmark);
+
+            actionLogService.createActionLog(
+                    actorUserId,
+                    projectId,
+                    topicId,
+                    ActionType.BOOKMARK_CANCEL
+            );
+
             return false;
         }
 
+        // 2. 생성
         Project project = projectRepository.getReferenceById(projectId);
         Topic topic = topicRepository.getReferenceById(topicId);
 
         bookmarkRepository.save(ProjectTopicBookmark.of(project, topic));
-        actionLogService.createActionLog(actorUserId, projectId, topicId, ActionType.BOOKMARK);
+
+        actionLogService.createActionLog(
+                actorUserId,
+                projectId,
+                topicId,
+                ActionType.BOOKMARK
+        );
 
         return true;
     }

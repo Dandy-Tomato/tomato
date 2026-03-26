@@ -38,7 +38,6 @@ const ProjectCreatePage = () => {
 
     const [skillSearch, setSkillSearch] = useState('');
     const [skillResults, setSkillResults] = useState([]);
-    const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
 
     useEffect(() => {
         if (isEditMode) {
@@ -94,7 +93,6 @@ const ProjectCreatePage = () => {
             techSkillIds: [...prev.techSkillIds, skill.id]
         }));
         setSkillSearch('');
-        setIsSkillDropdownOpen(false);
     };
 
     const removeSkill = (skillId) => {
@@ -220,33 +218,44 @@ const ProjectCreatePage = () => {
                                     </span>
                                 ))}
                             </div>
-                            <div className="dropdown-container">
-                                <div className="custom-dropdown" onClick={() => setIsSkillDropdownOpen(!isSkillDropdownOpen)}>
-                                    <span>{skillSearch || "기술 스택"}</span>
-                                    <MdExpandMore className={`arrow-icon ${isSkillDropdownOpen ? 'open' : ''}`} />
+                            <div className="input-with-button">
+                                <div className="input-wrapper relative" style={{ flex: 1, position: 'relative' }}>
+                                    <input 
+                                        type="text" 
+                                        className="form-input" 
+                                        placeholder="기술 스택 검색 (예: Java, React)"
+                                        value={skillSearch}
+                                        onChange={(e) => setSkillSearch(e.target.value)}
+                                    />
+                                    {skillSearch.trim() && (
+                                        <div className="search-results-container">
+                                            <ul className="search-results-list">
+                                                {skillResults.length > 0 ? (
+                                                    skillResults.map(s => (
+                                                        <li key={s.id} className="result-item" onClick={() => addSkill(s)}>
+                                                            {s.name}
+                                                        </li>
+                                                    ))
+                                                ) : (
+                                                    <li className="no-result">결과 없음</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
-                                {isSkillDropdownOpen && (
-                                    <div className="dropdown-menu">
-                                        <input 
-                                            type="text" 
-                                            className="dropdown-search"
-                                            placeholder="검색..."
-                                            value={skillSearch}
-                                            onChange={(e) => setSkillSearch(e.target.value)}
-                                            autoFocus
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                        <ul className="dropdown-list">
-                                            {skillResults.length > 0 ? (
-                                                skillResults.map(s => (
-                                                    <li key={s.id} onClick={() => addSkill(s)}>{s.name}</li>
-                                                ))
-                                            ) : (
-                                                <li className="no-result">결과 없음</li>
-                                            )}
-                                        </ul>
-                                    </div>
-                                )}
+                                <button 
+                                    type="button" 
+                                    className="add-button"
+                                    onClick={() => {
+                                        if (skillResults.length > 0) {
+                                            addSkill(skillResults[0]);
+                                        } else if (skillSearch.trim()) {
+                                            showAlert('info', '검색 결과 없음', '검색 결과가 없습니다. 목록에서 선택해 주세요.');
+                                        }
+                                    }}
+                                >
+                                    추가
+                                </button>
                             </div>
                         </div>
 

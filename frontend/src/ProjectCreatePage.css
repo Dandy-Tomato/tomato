@@ -107,74 +107,79 @@
     font-weight: 500;
 }
 
-/* Custom Dropdown */
-.dropdown-container {
-    position: relative;
-    max-width: 120px;
-}
-
-.custom-dropdown {
+/* Tech Stack Search */
+.input-with-button {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 15px;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #666;
-    cursor: pointer;
-    background: #fff;
+    gap: 10px;
+    align-items: flex-start;
 }
 
-.arrow-icon {
-    font-size: 18px;
-    transition: transform 0.2s;
+.input-wrapper.relative {
+    position: relative;
+    flex: 1;
 }
 
-.arrow-icon.open {
-    transform: rotate(180deg);
-}
-
-.dropdown-menu {
+.search-results-container {
     position: absolute;
-    top: calc(100% + 5px);
+    top: 100%;
     left: 0;
-    width: 200px;
-    background: white;
-    border: 1px solid #eee;
+    right: 0;
+    background-color: white;
+    border: 1px solid #ff6b6b;
     border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
     z-index: 100;
-    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 5px;
 }
 
-.dropdown-search {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #eee;
-    border-radius: 4px;
-    font-size: 12px;
-    margin-bottom: 8px;
-}
-
-.dropdown-list {
+.search-results-list {
     list-style: none;
     padding: 0;
     margin: 0;
-    max-height: 150px;
-    overflow-y: auto;
 }
 
-.dropdown-list li {
-    padding: 8px 12px;
-    font-size: 13px;
+.result-item {
+    padding: 12px 15px;
     cursor: pointer;
-    border-radius: 4px;
+    font-size: 13px;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left;
 }
 
-.dropdown-list li:hover {
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.result-item:hover {
     background-color: #fff5f5;
     color: #ff6b6b;
+}
+
+.no-result {
+    padding: 12px 15px;
+    font-size: 13px;
+    color: #999;
+    text-align: center;
+}
+
+.add-button {
+    padding: 15px 25px;
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+}
+
+.add-button:hover {
+    background-color: #ee5a5a;
 }
 
 /* Domain Tags */
