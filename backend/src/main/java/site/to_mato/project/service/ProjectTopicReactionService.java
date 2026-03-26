@@ -59,7 +59,7 @@ public class ProjectTopicReactionService {
                 }
 
                 ProjectTopicReaction createdReaction = createReaction(projectId, topicId, reaction);
-                createActionLog(actorUserId, projectId, topicId, reaction);
+                createActionLog(actorUserId, projectId, topicId, toActionType(reaction));
 
                 return ProjectTopicReactionResponse.of(
                         createdReaction.getReaction().name(),
@@ -71,14 +71,19 @@ public class ProjectTopicReactionService {
                 throw new BusinessException(ErrorCode.REACTION_CONFLICT);
             }
 
-            if (reactionEntity.getReaction() == reaction) {
+            Reaction previousReaction = reactionEntity.getReaction();
+
+            if (previousReaction == reaction) {
                 deleteReaction(reactionEntity);
+                createActionLog(actorUserId, projectId, topicId, toCancelActionType(previousReaction));
                 return ProjectTopicReactionResponse.of(null, null);
             }
 
             reactionEntity.changeReaction(reaction);
             reactionRepository.flush();
-            createActionLog(actorUserId, projectId, topicId, reaction);
+
+            createActionLog(actorUserId, projectId, topicId, toCancelActionType(previousReaction));
+            createActionLog(actorUserId, projectId, topicId, toActionType(reaction));
 
             return ProjectTopicReactionResponse.of(
                     reactionEntity.getReaction().name(),
@@ -105,12 +110,12 @@ public class ProjectTopicReactionService {
         reactionRepository.flush();
     }
 
-    private void createActionLog(Long actorUserId, Long projectId, Long topicId, Reaction reaction) {
+    private void createActionLog(Long actorUserId, Long projectId, Long topicId, ActionType actionType) {
         actionLogService.createActionLog(
                 actorUserId,
                 projectId,
                 topicId,
-                toActionType(reaction)
+                actionType
         );
     }
 
@@ -118,6 +123,13 @@ public class ProjectTopicReactionService {
         return switch (reaction) {
             case LIKE -> ActionType.LIKE;
             case DISLIKE -> ActionType.DISLIKE;
+        };
+    }
+
+    private ActionType toCancelActionType(Reaction reaction) {
+        return switch (reaction) {
+            case LIKE -> ActionType.LIKE_CANCEL;
+            case DISLIKE -> ActionType.DISLIKE_CANCEL;
         };
     }
 }

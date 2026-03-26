@@ -8,13 +8,21 @@ from app.repositories.action_log_repository import (
     count_effective_actions_by_project_id,
     find_recent_effective_action_logs_with_topic_embedding,
 )
-from app.repositories.project_domain_repository import upsert_project_domain_weight
+from app.repositories.project_domain_repository import (
+    delete_project_domain_weight_if_exists,
+    find_project_domain_weight,
+    upsert_project_domain_weight,
+)
 from app.repositories.project_repository import (
     find_project_preference_state_by_project_id,
     update_last_processed_action_log_id,
     update_preference_state,
 )
-from app.repositories.project_skill_repository import upsert_project_skill_weight
+from app.repositories.project_skill_repository import (
+    delete_project_skill_weight_if_exists,
+    find_project_skill_weight,
+    upsert_project_skill_weight,
+)
 from app.repositories.topic_repository import (
     find_topic_domain_id_by_topic_id,
     find_topic_embedding_by_id,
@@ -28,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 PREFERENCE_INIT_THRESHOLD = 3
 PREFERENCE_INIT_SAMPLE_SIZE = 3
+MIN_WEIGHT_THRESHOLD = 0.05
 
 
 def update_project_preference_by_event(
@@ -288,17 +297,79 @@ def reflect_project_skill_and_domain_weight(
     )
 
     for skill_id in skill_ids:
-        upsert_project_skill_weight(
+        reflect_project_skill_weight(
             db=db,
             project_id=project_id,
             skill_id=skill_id,
-            weight=action_type.weight,
+            delta=action_type.weight,
         )
 
     if domain_id is not None:
-        upsert_project_domain_weight(
+        reflect_project_domain_weight(
             db=db,
             project_id=project_id,
             domain_id=domain_id,
-            weight=action_type.weight,
+            delta=action_type.weight,
         )
+
+
+def reflect_project_skill_weight(
+    db,
+    project_id: int,
+    skill_id: int,
+    delta: float,
+) -> None:
+    current_weight = find_project_skill_weight(
+        db=db,
+        project_id=project_id,
+        skill_id=skill_id,
+    )
+
+    base_weight = 0.0 if current_weight is None else current_weight
+    new_weight = max(0.0, base_weight + delta)
+
+    if new_weight < MIN_WEIGHT_THRESHOLD:
+        delete_project_skill_weight_if_exists(
+            db=db,
+            project_id=project_id,
+            skill_id=skill_id,
+        )
+        return
+
+    upsert_project_skill_weight(
+        db=db,
+        project_id=project_id,
+        skill_id=skill_id,
+        weight=new_weight,
+    )
+
+
+def reflect_project_domain_weight(
+    db,
+    project_id: int,
+    domain_id: int,
+    delta: float,
+) -> None:
+    current_weight = find_project_domain_weight(
+        db=db,
+        project_id=project_id,
+        domain_id=domain_id,
+    )
+
+    base_weight = 0.0 if current_weight is None else current_weight
+    new_weight = max(0.0, base_weight + delta)
+
+    if new_weight < MIN_WEIGHT_THRESHOLD:
+        delete_project_domain_weight_if_exists(
+            db=db,
+            project_id=project_id,
+            domain_id=domain_id,
+        )
+        return
+
+    upsert_project_domain_weight(
+        db=db,
+        project_id=project_id,
+        domain_id=domain_id,
+        weight=new_weight,
+    )
