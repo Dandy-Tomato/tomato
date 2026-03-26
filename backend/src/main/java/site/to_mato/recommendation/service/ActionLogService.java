@@ -3,6 +3,7 @@ package site.to_mato.recommendation.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -23,7 +24,7 @@ public class ActionLogService {
     private final ActionLogProcessRepository actionLogProcessRepository;
     private final RecommendationEventProducer recommendationEventProducer;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long createActionLog(
             Long actorUserId,
             Long projectId,

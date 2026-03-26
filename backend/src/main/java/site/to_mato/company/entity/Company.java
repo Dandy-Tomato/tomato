@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import site.to_mato.catalog.entity.Domain;
 import site.to_mato.common.entity.BaseEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
 @Entity
 @Table(name = "companies")
@@ -28,6 +31,9 @@ public class Company extends BaseEntity {
 
     @Column(name = "search_name")
     private String searchName;
+
+    @OneToMany(mappedBy = "company")
+    private List<CompanySkill> companySkills = new ArrayList<>();
 
     @Builder(access = AccessLevel.PRIVATE)
     private Company(String name, Domain domain) {

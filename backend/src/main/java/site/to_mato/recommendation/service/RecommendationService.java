@@ -24,25 +24,27 @@ import site.to_mato.recommendation.dto.response.RecommendationApiResponse;
 import site.to_mato.recommendation.dto.response.RecommendationDetailResponse;
 import site.to_mato.recommendation.dto.response.RecommendationResponse;
 import site.to_mato.recommendation.client.RecommendationClient;
+import site.to_mato.recommendation.entity.enums.ActionType;
 import site.to_mato.topic.dto.response.ChildTopicDetailResponse;
 import site.to_mato.topic.entity.ChildTopic;
 import site.to_mato.topic.repository.ChildTopicRepository;
 import site.to_mato.topic.entity.Topic;
 import site.to_mato.topic.repository.TopicRepository;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-@Slf4j
 public class RecommendationService {
 
-    private final ProjectDomainRepository projectDomainRepository;
-    private final ProjectRepository projectRepository;
-    private final RecommendationClient recommendationClient;
     private final TopicRepository topicRepository;
+    private final ActionLogService actionLogService;
+    private final ChildTopicRepository childTopicRepository;
+    private final RecommendationClient recommendationClient;
+    private final ProjectRepository projectRepository;
+    private final ProjectDomainRepository projectDomainRepository;
     private final ProjectTopicBookmarkRepository projectTopicBookmarkRepository;
     private final ProjectTopicReactionRepository projectTopicReactionRepository;
-    private final ChildTopicRepository childTopicRepository;
 
     // 프로젝트 별 추천 주제 조회
     public List<RecommendationResponse> getRecommendationsByProjectId(Long projectId) {
@@ -93,7 +95,7 @@ public class RecommendationService {
                 .toList();
     }
 
-    public RecommendationDetailResponse getRecommendationDetail(Long projectId, Long topicId) {
+    public RecommendationDetailResponse getRecommendationDetail(Long userId, Long projectId, Long topicId) {
         Topic topic =  topicRepository.findByIdWithSkills(topicId).orElseThrow(() -> new BusinessException(ErrorCode.TOPIC_NOT_FOUND));
         List<Long> skillIds = topic.getTopicSkills().stream().map(ts -> ts.getSkill().getId()).toList();
 
@@ -114,6 +116,13 @@ public class RecommendationService {
         List<ChildTopicDetailResponse> childTopicInfos = childTopics.stream()
                 .map(ChildTopicDetailResponse::from)
                 .collect(Collectors.toList());
+
+        actionLogService.createActionLog(
+                userId,
+                projectId,
+                topicId,
+                ActionType.VIEW_DETAIL
+        );
 
         return RecommendationDetailResponse.of(
                 topic.getId(),

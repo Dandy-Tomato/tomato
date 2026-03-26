@@ -2,6 +2,7 @@ package site.to_mato.recommendation.controller;
 
 import java.util.List;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,10 +31,11 @@ public class RecommendationController {
 
     @GetMapping("/{topicId}")
     public ApiResponse<RecommendationDetailResponse> getRecommendationDetail(
+            @AuthenticationPrincipal Long userId,
             @PathVariable Long projectId,
             @PathVariable Long topicId) {
 
-        RecommendationDetailResponse response = recommendationService.getRecommendationDetail(projectId, topicId);
+        RecommendationDetailResponse response = recommendationService.getRecommendationDetail(userId, projectId, topicId);
         return ApiResponse.ok(response);
     }
 }

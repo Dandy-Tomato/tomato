@@ -15,6 +15,8 @@ import site.to_mato.project.repository.ProjectMemberRepository;
 import site.to_mato.project.repository.ProjectRepository;
 import site.to_mato.project.repository.ProjectSkillRepository;
 import site.to_mato.llm.prompt.model.ChildTopicPromptDto;
+import site.to_mato.recommendation.entity.enums.ActionType;
+import site.to_mato.recommendation.service.ActionLogService;
 import site.to_mato.topic.dto.response.ChildTopicDetailResponse;
 import site.to_mato.topic.dto.response.RefinedTopicResponse;
 import site.to_mato.topic.entity.ChildTopic;
@@ -30,15 +32,17 @@ import site.to_mato.topic.repository.TopicRepository;
 @RequiredArgsConstructor
 public class ChildTopicService {
 
-    private final ProjectRepository projectRepository;
-    private final ProjectMemberRepository projectMemberRepository;
+    private final ActionLogService actionLogService;
+
     private final TopicRepository topicRepository;
+    private final ProjectRepository projectRepository;
     private final ChildTopicRepository childTopicRepository;
+    private final ProjectMemberRepository projectMemberRepository;
+
     private final OpenAiClient openAiClient;
     private final ObjectMapper objectMapper;
-    private final ChildTopicPromptTemplate promptTemplate;
-
     private final ChildTopicPromptDtoAssembler assembler;
+    private final ChildTopicPromptTemplate promptTemplate;
 
 
     @Transactional
@@ -56,6 +60,13 @@ public class ChildTopicService {
 
         ChildTopic childTopic = ChildTopic.create(parsed.title(), parsed.content(), topic, project);
         ChildTopic savedChildTopic = childTopicRepository.save(childTopic);
+
+        actionLogService.createActionLog(
+                userId,
+                projectId,
+                topicId,
+                ActionType.VIEW_SPECIFICATION
+        );
 
         return RefinedTopicResponse.from(savedChildTopic);
     }
