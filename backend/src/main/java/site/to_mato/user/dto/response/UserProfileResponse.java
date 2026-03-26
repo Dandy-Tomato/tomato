@@ -9,6 +9,6 @@ public record UserProfileResponse(
         String githubUsername,
         Long positionId,
         List<Long> skillIds,
-        List<String> companyNames
+        List<DesiredCompanyResponse> companies
 ) {
 }

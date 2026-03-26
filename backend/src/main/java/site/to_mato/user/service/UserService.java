@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.common.exception.BusinessException;
 import site.to_mato.common.exception.ErrorCode;
+import site.to_mato.user.dto.response.DesiredCompanyResponse;
 import site.to_mato.user.dto.response.UserProfileResponse;
 import site.to_mato.user.entity.User;
 import site.to_mato.user.repository.UserDesiredCompanyRepository;
@@ -44,8 +45,11 @@ public class UserService {
                 .map(userSkill -> userSkill.getSkill().getId())
                 .toList();
 
-        List<String> companyNames = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
-                .map(userCompany -> userCompany.getCompany().getName())
+        List<DesiredCompanyResponse> companies = userDesiredCompanyRepository.findAllByUser_Id(userId).stream()
+                .map(userCompany -> new DesiredCompanyResponse(
+                        userCompany.getCompany().getId(),
+                        userCompany.getCompany().getName()
+                ))
                 .toList();
 
         return new UserProfileResponse(
@@ -55,7 +59,7 @@ public class UserService {
                 user.getGithubUsername(),
                 user.getPosition() != null ? user.getPosition().getId() : null,
                 skillIds,
-                companyNames
+                companies
         );
     }
 }
