@@ -5,14 +5,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.to_mato.catalog.entity.Domain;
 import site.to_mato.catalog.entity.Skill;
-import site.to_mato.company.entity.Company;
+import site.to_mato.company.repository.CompanySkillRepository;
 import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectDomain;
 import site.to_mato.project.entity.ProjectSkill;
 import site.to_mato.project.repository.ProjectDomainRepository;
 import site.to_mato.project.repository.ProjectSkillRepository;
 import site.to_mato.user.entity.User;
-import site.to_mato.user.entity.UserDesiredCompany;
 import site.to_mato.user.entity.UserSkill;
 import site.to_mato.user.repository.UserDesiredCompanyRepository;
 import site.to_mato.user.repository.UserSkillRepository;
@@ -20,6 +19,8 @@ import site.to_mato.user.repository.UserSkillRepository;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class ProjectProfileService {
     private static final double MEMBER_WEIGHT = 1.0;
     private static final double SELECTED_WEIGHT = 3.0;
 
+    private final CompanySkillRepository companySkillRepository;
     private final ProjectSkillRepository projectSkillRepository;
     private final ProjectDomainRepository projectDomainRepository;
     private final UserSkillRepository userSkillRepository;
@@ -63,40 +65,19 @@ public class ProjectProfileService {
     }
 
     private void addUserSkills(Project project, Long userId) {
-        List<UserSkill> userSkills = userSkillRepository.findAllByUser_Id(userId);
-
-        for (UserSkill userSkill : userSkills) {
-            Skill skill = userSkill.getSkill();
-            if (skill == null) {
-                continue;
-            }
+        for (Skill skill : getDistinctMemberSkills(userId)) {
             addMemberSkill(project, skill);
         }
     }
 
     private void removeUserSkills(Project project, Long userId) {
-        List<UserSkill> userSkills = userSkillRepository.findAllByUser_Id(userId);
-
-        for (UserSkill userSkill : userSkills) {
-            Skill skill = userSkill.getSkill();
-            if (skill == null) {
-                continue;
-            }
+        for (Skill skill : getDistinctMemberSkills(userId)) {
             removeMemberSkill(project, skill.getId());
         }
     }
 
     private void addUserDomains(Project project, Long userId) {
-        List<UserDesiredCompany> userDesiredCompanies =
-                userDesiredCompanyRepository.findAllByUser_Id(userId);
-
-        List<Domain> domains = userDesiredCompanies.stream()
-                .map(UserDesiredCompany::getCompany)
-                .filter(Objects::nonNull)
-                .map(Company::getDomain)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        List<Domain> domains = userDesiredCompanyRepository.findDistinctDomainsByUserId(userId);
 
         for (Domain domain : domains) {
             addMemberDomain(project, domain);
@@ -104,20 +85,34 @@ public class ProjectProfileService {
     }
 
     private void removeUserDomains(Project project, Long userId) {
-        List<UserDesiredCompany> userDesiredCompanies =
-                userDesiredCompanyRepository.findAllByUser_Id(userId);
-
-        List<Domain> domains = userDesiredCompanies.stream()
-                .map(UserDesiredCompany::getCompany)
-                .filter(Objects::nonNull)
-                .map(Company::getDomain)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        List<Domain> domains = userDesiredCompanyRepository.findDistinctDomainsByUserId(userId);
 
         for (Domain domain : domains) {
             removeMemberDomain(project, domain.getId());
         }
+    }
+
+    private List<Skill> getDistinctMemberSkills(Long userId) {
+        List<Skill> userSkills = userSkillRepository.findAllByUser_Id(userId).stream()
+                .map(UserSkill::getSkill)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<Long> companyIds = userDesiredCompanyRepository.findDistinctCompanyIdsByUserId(userId);
+
+        List<Skill> companySkills = companyIds.isEmpty()
+                ? List.of()
+                : companySkillRepository.findDistinctSkillsByCompanyIds(companyIds);
+
+        return Stream.concat(userSkills.stream(), companySkills.stream())
+                .collect(Collectors.toMap(
+                        Skill::getId,
+                        skill -> skill,
+                        (a, b) -> a
+                ))
+                .values()
+                .stream()
+                .toList();
     }
 
     private void replaceSelectedSkills(Project project, List<Skill> selectedSkills) {
