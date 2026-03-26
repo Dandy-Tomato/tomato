@@ -191,14 +191,17 @@ const SignupPage = () => {
 
     const addCompany = (company) => {
         if (!company) return;
+        const cId = company.id || company.companyId;
+        const cName = company.name || company.companyName;
+
         // Check if the company is already added (ID 또는 이름 중복 체크)
-        if (profile.companies.some(c => (company.id && c.id === company.id) || (c.name === company.name))) {
+        if (profile.companies.some(c => (cId && (c.id === cId || c.companyId === cId)) || (cName && (c.name === cName || c.companyName === cName)))) {
             showAlert('info', '이미 추가됨', '이미 추가된 기업입니다.');
             return;
         }
         setProfile(prev => ({
             ...prev,
-            companies: [...prev.companies, { id: company.id, name: company.name }]
+            companies: [...prev.companies, { id: cId, name: cName }]
         }));
         setCompanySearch('');
         setCompanyResults([]);
@@ -224,10 +227,11 @@ const SignupPage = () => {
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
-            position: techStack.positionId ? Number(techStack.positionId) : null,
             positionId: techStack.positionId ? Number(techStack.positionId) : null,
-            companyIds: profile.companies.map(c => Number(c.id)),
-            companyNames: profile.companies.map(c => c.name),
+            companyIds: profile.companies
+                .map(c => c.id || c.companyId)
+                .filter(id => id !== undefined && id !== null && !isNaN(Number(id)))
+                .map(id => Number(id)),
             skillIds: techStack.skills.map(s => Number(s.id))
         };
 

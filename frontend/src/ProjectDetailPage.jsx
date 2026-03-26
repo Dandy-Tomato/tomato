@@ -831,7 +831,10 @@ const ProjectDetailPage = () => {
                                                 <button
                                                     className="more-btn"
                                                     disabled={isFetchingMore}
-                                                    onClick={() => fetchRecommendations(false)}
+                                                    onClick={() => {
+                                                        fetchRecommendations(false);
+                                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }}
                                                 >
                                                     <MdAutoAwesome className="btn-icon" /> {isFetchingMore ? '추천 주제 생성 중...' : '다시 추천받기'}
                                                 </button>
