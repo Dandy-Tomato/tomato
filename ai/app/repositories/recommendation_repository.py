@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # ── 상수 ──────────────────────────────────────────────────
 # top_k의 몇 배를 후보로 추릴지
-CANDIDATE_K_MULTIPLIER = 5
+CANDIDATE_K_MULTIPLIER = 15
 
 # 반환 목록을 몇 개 단위로 묶어서 섞을지
 SHUFFLE_GROUP_SIZE = 7
