@@ -217,7 +217,7 @@ const ProjectDetailPage = () => {
     const [topicDetail, setTopicDetail] = useState(null);
     const [localBookmarks, setLocalBookmarks] = useState(() => {
         try {
-            return new Set(JSON.parse(localStorage.getItem('local_bookmarks') || '[]'));
+            return new Set(JSON.parse(localStorage.getItem(`local_bookmarks_${projectId}`) || '[]'));
         } catch { return new Set(); }
     });
     const [isTopicLoading, setIsTopicLoading] = useState(false);
@@ -259,6 +259,12 @@ const ProjectDetailPage = () => {
     const currentUserId = Number(localStorage.getItem('userId'));
 
     useEffect(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(`local_bookmarks_${projectId}`) || '[]');
+            setLocalBookmarks(new Set(saved));
+        } catch {
+            setLocalBookmarks(new Set());
+        }
         fetchProjectDetail();
         fetchRecommendations();
     }, [projectId]);
@@ -566,7 +572,7 @@ const ProjectDetailPage = () => {
                     const next = new Set(prev);
                     if (newStatus) next.add(topicId);
                     else next.delete(topicId);
-                    localStorage.setItem('local_bookmarks', JSON.stringify([...next]));
+                    localStorage.setItem(`local_bookmarks_${projectId}`, JSON.stringify([...next]));
                     return next;
                 });
             } else {
