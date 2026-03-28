@@ -20,7 +20,7 @@ function App() {
                     
                     {/* 보호된 라우트들 */}
                     <Route path="/main" element={<ProtectedRoute><MainPage /></ProtectedRoute>} />
-                    <Route path="/signup" element={<ProtectedRoute><SignupPage /></ProtectedRoute>} />
+                    <Route path="/signup" element={<SignupPage />} />
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                     <Route path="/projects/create" element={<ProtectedRoute><ProjectCreatePage /></ProtectedRoute>} />
                     <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
