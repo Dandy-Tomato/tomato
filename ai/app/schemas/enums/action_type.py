@@ -23,17 +23,17 @@ class ActionType(str, Enum):
         return {
             ActionType.IMPRESSION: 0.0,
 
-            ActionType.LIKE: 0.3,
-            ActionType.LIKE_CANCEL: -0.3,
+            ActionType.LIKE: 1.0,
+            ActionType.LIKE_CANCEL: -1.0,
 
-            ActionType.DISLIKE: -0.2,
-            ActionType.DISLIKE_CANCEL: 0.2,
+            ActionType.DISLIKE: -0.5,
+            ActionType.DISLIKE_CANCEL: 0.5,
 
-            ActionType.BOOKMARK: 0.2,
-            ActionType.BOOKMARK_CANCEL: -0.2,
+            ActionType.BOOKMARK: 0.6,
+            ActionType.BOOKMARK_CANCEL: -0.6,
 
-            ActionType.VIEW_DETAIL: 0.06,
-            ActionType.VIEW_SPECIFICATION: 0.1,
+            ActionType.VIEW_DETAIL: 0.2,
+            ActionType.VIEW_SPECIFICATION: 0.3,
         }[self]
 
     @classmethod
