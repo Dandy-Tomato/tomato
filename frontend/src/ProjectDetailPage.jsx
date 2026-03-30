@@ -11,6 +11,7 @@ import {
 } from 'react-icons/md';
 import AlertModal from './components/AlertModal';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm'
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -184,7 +185,7 @@ const TopicDetailView = ({
                                     </div>
                                     {expandedChildId === child.childTopicId && (
                                         <div className="child-topic-content markdown-body">
-                                            <ReactMarkdown>{child.content}</ReactMarkdown>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{child.content}</ReactMarkdown>
                                         </div>
                                     )}
                                 </div>
