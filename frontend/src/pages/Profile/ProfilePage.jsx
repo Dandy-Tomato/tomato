@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import Navbar from './components/Navbar';
+import Navbar from '../../components/common/Navbar';
 import './ProfilePage.css';
 import { MdPerson, MdCode, MdBusiness } from 'react-icons/md';
-import { POSITIONS, SKILLS } from './constants';
-import AlertModal from './components/AlertModal';
+import { POSITIONS, SKILLS } from '../../constants';
+import AlertModal from '../../components/common/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+/**
+ * 사용자 정보 확인 및 수정 페이지 컴포넌트입니다.
+ * 닉네임, 희망 직무, 기술 스택, 관심 기업 등의 기본 프로필을 열람하고 편집할 수 있습니다.
+ */
 const ProfilePage = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [loading, setLoading] = useState(true);

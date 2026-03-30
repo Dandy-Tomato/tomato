@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './SignupPage.css';
-import { POSITIONS, SKILLS } from './constants';
-import AlertModal from './components/AlertModal';
+import { POSITIONS, SKILLS } from '../../constants'; // 경로 변경
+import AlertModal from '../../components/common/AlertModal'; // 경로 변경
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+/**
+ * 신규 회원가입 및 소셜 로그인 온보딩 페이지 컴포넌트
+ * 1단계: 기본 로그인 정보 (이메일, 비밀번호) 설정
+ * 2단계: 프로필 (닉네임, 희망 기업, GitHub) 설정
+ * 3단계: 기술 스택 (직무 및 보유 기술) 설정
+ */
 const SignupPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    
+    // 현재 가입 단계 (Step 1~3)
     const [step, setStep] = useState(1);
+    
+    // 소셜 로그인 모드 여부
     const [isSocial, setIsSocial] = useState(false);
+    
+    // 알림창(AlertModal) 제어 상태
     const [modal, setModal] = useState({
         isOpen: false,
         type: 'success',
@@ -23,7 +35,7 @@ const SignupPage = () => {
         setModal({ isOpen: true, type, title, message, onConfirm });
     };
 
-    // Step 1 State
+    /** ==== [Step 1] 이메일 & 비밀번호 설정 ==== */
     const [loginInfo, setLoginInfo] = useState({
         email: '',
         password: '',
@@ -31,61 +43,69 @@ const SignupPage = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [emailAvailable, setEmailAvailable] = useState(null);
+    const [emailAvailable, setEmailAvailable] = useState(null); // 이메일 중복확인 통과 여부
     const [emailError, setEmailError] = useState('');
 
-    // Step 2 State (Profile)
+    /** ==== [Step 2] 프로필 및 기업 정보 설정 ==== */
     const [profile, setProfile] = useState({
         nickname: '',
         githubUsername: '',
-        companies: [] // {id, name}
+        companies: [] // 추가된 기업 배열: {id, name}
     });
     const [companySearch, setCompanySearch] = useState('');
     const [companyResults, setCompanyResults] = useState([]);
     const [isCompanyLoading, setIsCompanyLoading] = useState(false);
 
-    // Step 3 State (Tech Stack)
+    /** ==== [Step 3] 직무 및 기술 스택 설정 ==== */
     const [techStack, setTechStack] = useState({
         positionId: null,
-        skills: [] // {id, name}
+        skills: [] // 추가된 기술 스택 배열: {id, name}
     });
     const [skillSearch, setSkillSearch] = useState('');
     const [skillResults, setSkillResults] = useState([]);
 
+    /** URL 파라미터를 읽어 소셜 연동(가입)인지 확인합니다. */
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         if (params.get('isSocial') === 'true') {
             setIsSocial(true);
-            setStep(2); // Social login starts at step 2
+            setStep(2); // 소셜 로그인의 경우 이메일 스텝 건너뜀 (프로필부터 시작)
         }
     }, [location]);
 
+    /** 기술 스택 검색 자동완성 필터링 (로컬 상수 데이터인 SKILLS를 기반으로 진행됨) */
     useEffect(() => {
         if (skillSearch.trim()) {
             const filtered = SKILLS.filter(s =>
                 s.name.toLowerCase().includes(skillSearch.toLowerCase()) &&
-                !techStack.skills.find(ts => ts.id === s.id)
+                !techStack.skills.find(ts => ts.id === s.id) // 이미 선택된 건 제외
             );
-            setSkillResults(filtered.slice(0, 10));
+            setSkillResults(filtered.slice(0, 10)); // 최대 10개까지만 노출
         } else {
             setSkillResults([]);
         }
     }, [skillSearch, techStack.skills]);
 
+    /** 1단계 인풋 폼 핸들러 */
     const handleLoginInputChange = (e) => {
         const { name, value } = e.target;
         setLoginInfo(prev => ({ ...prev, [name]: value }));
+        
+        // 이메일 내용이 변경되면 기존에 수행한 중복확인은 무효화됨
         if (name === 'email') {
             setEmailAvailable(null);
             setEmailError('');
         }
     };
 
+    /** 이메일 중복 확인 API 호출 핸들러 */
     const checkEmailAvailability = async () => {
         if (!loginInfo.email) {
             setEmailError('이메일을 입력해 주세요.');
             return;
         }
+        
+        // 기본적인 이메일 정규식 포맷 검증
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(loginInfo.email)) {
             setEmailError('올바른 이메일 형식이 아닙니다.');
@@ -95,6 +115,7 @@ const SignupPage = () => {
         try {
             const response = await fetch(`${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(loginInfo.email)}`);
             const result = await response.json();
+            
             if (response.ok && result.data) {
                 setEmailAvailable(result.data.available);
                 if (!result.data.available) setEmailError('이미 사용 중인 이메일입니다.');
@@ -106,14 +127,16 @@ const SignupPage = () => {
         }
     };
 
+    /** 1단계 가입(회원정보 제출) 처리 핸들러 */
     const handleSignupStep1 = async () => {
+        // 필수 검증 로직 통과 확인
         if (!emailAvailable) return showAlert('error', '중복 확인 필요', '이메일 중복 확인이 필요합니다.');
         if (!loginInfo.password || loginInfo.password !== loginInfo.confirmPassword) {
             return showAlert('error', '비밀번호 불일치', '비밀번호가 일치하지 않습니다.');
         }
 
         try {
-            // 1. 회원가입 요청
+            // 1. 유저 회원가입 요청
             const signupResponse = await fetch(`${API_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -121,7 +144,7 @@ const SignupPage = () => {
             });
 
             if (signupResponse.ok) {
-                // 2. 가입 성공 시 자동 로그인하여 토큰 획득
+                // 2. 가입 완료 직후 온보딩 절차 진행을 위해 곧바로 자동 로그인을 실행하여 JWT 토큰 획득
                 try {
                     const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
                         method: 'POST',
@@ -133,7 +156,7 @@ const SignupPage = () => {
                     if (loginResponse.ok && loginResult.data) {
                         localStorage.setItem("accessToken", loginResult.data.accessToken);
                         localStorage.setItem("refreshToken", loginResult.data.refreshToken);
-                        setStep(2);
+                        setStep(2); // 2단계 프로필 설정으로 진행
                     } else {
                         showAlert('error', '로그인 오류', '자동 로그인에 실패했습니다. 다시 시도해 주세요.');
                     }
@@ -151,7 +174,7 @@ const SignupPage = () => {
         }
     };
 
-    // Step 2 Handlers
+    /** 희망 연관 기업 검색 디바운싱(Debouncing) 핸들러 */
     useEffect(() => {
         const fetchCompanies = async () => {
             if (companySearch.trim()) {
@@ -160,9 +183,13 @@ const SignupPage = () => {
                     console.log("Fetching companies for keyword:", companySearch);
                     const response = await fetch(`${API_BASE_URL}/companies/search/auto-complete?keyword=${encodeURIComponent(companySearch)}`);
                     const result = await response.json();
+                    
                     console.log("Company Search API Result:", result);
+                    
                     if (response.ok && result.data) {
                         const dataArray = Array.isArray(result.data) ? result.data : (result.data.content || []);
+                        
+                        // 이미 선택된 기업은 필터링(중복 방지)
                         const filtered = dataArray.filter(c => 
                             !profile.companies.some(pc => 
                                 (c.id && pc.id === c.id) || (pc.name === c.name)
@@ -185,45 +212,54 @@ const SignupPage = () => {
             }
         };
 
+        // 타이핑 중 과도한 서버 요청 방지 (디바운스 300ms)
         const timer = setTimeout(fetchCompanies, 300);
         return () => clearTimeout(timer);
     }, [companySearch, profile.companies]);
 
+    /** 희망 기업 추가 핸들러 */
     const addCompany = (company) => {
         if (!company) return;
         const cId = company.id || company.companyId;
         const cName = company.name || company.companyName;
 
-        // Check if the company is already added (ID 또는 이름 중복 체크)
+        // 리스트에 이미 추가되어 있는지 중복 확인
         if (profile.companies.some(c => (cId && (c.id === cId || c.companyId === cId)) || (cName && (c.name === cName || c.companyName === cName)))) {
             showAlert('info', '이미 추가됨', '이미 추가된 기업입니다.');
             return;
         }
+        
         setProfile(prev => ({
             ...prev,
             companies: [...prev.companies, { id: cId, name: cName }]
         }));
+        
+        // 선택 후 검색창 리셋
         setCompanySearch('');
         setCompanyResults([]);
     };
 
+    /** 추가된 희망 기업 스택 삭제 */
     const removeCompany = (id) => {
         setProfile(prev => ({ ...prev, companies: prev.companies.filter(c => c.id !== id) }));
     };
 
-    // Step 3 Handlers
+    /** 희망 기술 스택 추가 핸들러 */
     const addSkill = (skill) => {
         setTechStack(prev => ({ ...prev, skills: [...prev.skills, skill] }));
-        setSkillSearch('');
+        setSkillSearch(''); // 선택 후 검색창 리셋
     };
 
+    /** 추가된 기술 스택 삭제 */
     const removeSkill = (id) => {
         setTechStack(prev => ({ ...prev, skills: prev.skills.filter(s => s.id !== id) }));
     };
 
+    /** 3단계 완료 및 최종 사용자 온보딩 처리 액션 */
     const handleFinalSubmit = async () => {
         if (!profile.nickname) return showAlert('error', '닉네임 필수', '닉네임을 입력해 주세요.');
 
+        // API 연동을 위한 최종 형태 맞춤 변환
         const body = {
             nickname: profile.nickname,
             githubUsername: profile.githubUsername || null,
@@ -237,6 +273,7 @@ const SignupPage = () => {
 
         console.log("Onboarding Request Payload (Final - Spec Match):", body);
 
+        // JWT 토큰을 취득하여 온보딩 수행
         const token = localStorage.getItem("accessToken");
         console.log("Onboarding Request - URL:", `${API_BASE_URL}/auth/onboarding`);
         console.log("Onboarding Request - Body:", body);
@@ -257,6 +294,8 @@ const SignupPage = () => {
                 console.log("Onboarding Response - Result:", result);
 
                 showAlert('success', '가입 완료', '회원가입 및 프로필 설정이 완료되었습니다!', () => navigate('/main'));
+                
+                // 설정된 닉네임을 다시 로그인 없이도 상단 등에 표시하기 위해 임시 저장
                 if (profile.nickname) {
                     localStorage.setItem('nickname', profile.nickname);
                 }
@@ -271,6 +310,7 @@ const SignupPage = () => {
         }
     };
 
+    /** ---- [렌더링 로직 영역] Step 1 ---- */
     const renderStep1 = () => (
         <div className="signup-form-content">
             <div className="signup-form-group">
@@ -288,6 +328,7 @@ const SignupPage = () => {
                 {emailError && <p className="error-message">{emailError}</p>}
                 {emailAvailable && <p className="success-message">사용 가능한 이메일입니다.</p>}
             </div>
+            
             <div className="signup-form-group">
                 <label>비밀번호<span className="required-star">*</span></label>
                 <div className="input-wrapper">
@@ -296,6 +337,7 @@ const SignupPage = () => {
                     <svg className="input-icon-clickable" onClick={() => setShowPassword(!showPassword)} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{showPassword ? (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>) : (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>)}</svg>
                 </div>
             </div>
+            
             <div className="signup-form-group">
                 <label>비밀번호 확인<span className="required-star">*</span></label>
                 <div className="input-wrapper">
@@ -304,10 +346,12 @@ const SignupPage = () => {
                     <svg className="input-icon-clickable" onClick={() => setShowConfirmPassword(!showConfirmPassword)} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{showConfirmPassword ? (<><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></>) : (<><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></>)}</svg>
                 </div>
             </div>
+            
             <button className="next-button" onClick={handleSignupStep1}>다음</button>
         </div>
     );
 
+    /** ---- [렌더링 로직 영역] Step 2 ---- */
     const renderStep2 = () => (
         <div className="signup-form-content">
             <div className="signup-form-group">
@@ -316,6 +360,7 @@ const SignupPage = () => {
                     <input type="text" placeholder="닉네임을 입력하세요." value={profile.nickname} onChange={(e) => setProfile({ ...profile, nickname: e.target.value })} />
                 </div>
             </div>
+            
             <div className="signup-form-group">
                 <label>취업을 희망하는 기업을 추가해주세요.</label>
                 <div className="input-with-button">
@@ -328,6 +373,7 @@ const SignupPage = () => {
                                 onChange={(e) => setCompanySearch(e.target.value)}
                             />
                         </div>
+                        {/* 기업 검색 결과창 박스 렌더링 로직 */}
                         {(isCompanyLoading || (companySearch.trim() && companyResults.length >= 0)) && companySearch.trim() && (
                             <ul className="search-results" style={{
                                 position: 'absolute', top: '100%', left: 0, right: 0,
@@ -346,6 +392,7 @@ const SignupPage = () => {
                                                     key={c.id}
                                                     className="result-item"
                                                     onMouseDown={(e) => {
+                                                        // onBlur 방지를 위해 preventDefault 처리
                                                         e.preventDefault();
                                                         addCompany(c);
                                                     }}
@@ -367,14 +414,17 @@ const SignupPage = () => {
                             </ul>
                         )}
                     </div>
+                    
                     <button className="check-button" onClick={() => {
                         if (companyResults.length > 0) {
                             addCompany(companyResults[0]);
                         } else if (companySearch.trim()) {
+                            // 모달 alert 대비 기본 alert()이 편할 순 있으나 앱 성격상 일관성을 가질 수 있음
                             alert("검색 결과에서 기업을 선택해 주세요.");
                         }
                     }}>추가</button>
                 </div>
+                
                 <div className="tag-container">
                     {profile.companies.map(c => (
                         <div key={c.id} className="tag-item">
@@ -383,29 +433,37 @@ const SignupPage = () => {
                     ))}
                 </div>
             </div>
+            
             <div className="signup-form-group">
                 <label>GitHub 계정을 추가해주세요.</label>
                 <div className="input-wrapper">
                     <input type="text" placeholder="github.com/username" value={profile.githubUsername} onChange={(e) => setProfile({ ...profile, githubUsername: e.target.value })} />
                 </div>
             </div>
+            
             <button className="next-button" onClick={() => setStep(3)}>다음</button>
         </div>
     );
 
+    /** ---- [렌더링 로직 영역] Step 3 ---- */
     const renderStep3 = () => (
         <div className="signup-form-content">
             <div className="signup-form-group">
                 <label>직무를 선택해주세요. (1개만 선택 가능)</label>
                 <div className="position-grid">
                     {POSITIONS.map(p => (
-                        <button key={p.id} className={`position-item ${techStack.positionId === p.id ? 'active' : ''}`} onClick={() => setTechStack({ ...techStack, positionId: p.id })}>
+                        <button 
+                            key={p.id} 
+                            className={`position-item ${techStack.positionId === p.id ? 'active' : ''}`} 
+                            onClick={() => setTechStack({ ...techStack, positionId: p.id })}
+                        >
                             <span className="position-icon">{p.icon}</span>
                             <span className="position-name">{p.name}</span>
                         </button>
                     ))}
                 </div>
             </div>
+            
             <div className="signup-form-group">
                 <label>보유한 기술 스택을 선택해주세요.</label>
                 <div className="input-with-button">
@@ -417,6 +475,7 @@ const SignupPage = () => {
                             onChange={(e) => setSkillSearch(e.target.value)}
                             style={{ width: '100%', padding: '12px', border: '2px solid #E57358', borderRadius: '8px' }}
                         />
+                        {/* 검색 결과 출력 팝업 영역 */}
                         {skillResults.length > 0 && (
                             <ul className="search-results" style={{
                                 position: 'absolute', top: '100%', left: 0, right: 0,
@@ -449,6 +508,7 @@ const SignupPage = () => {
                             </ul>
                         )}
                     </div>
+                    
                     <button
                         className="check-button"
                         onClick={() => {
@@ -460,6 +520,7 @@ const SignupPage = () => {
                         }}
                     >추가</button>
                 </div>
+                
                 <div className="tag-container">
                     {techStack.skills.map(s => (
                         <div key={s.id} className="tag-item">
@@ -468,6 +529,7 @@ const SignupPage = () => {
                     ))}
                 </div>
             </div>
+            
             <button className="next-button" onClick={handleFinalSubmit}>완료</button>
         </div>
     );
@@ -477,22 +539,28 @@ const SignupPage = () => {
             <div className="signup-card">
                 <h1 className="signup-title">회원가입</h1>
                 <p className="signup-subtitle">TOMATO와 함께 프로젝트를 시작해보세요.</p>
+                
+                {/* 현재 진행 상황 표시 인디케이터 바 */}
                 <div className="stepper-container">
                     <div className={`step-item ${step >= 1 ? 'active' : ''}`}>
                         <div className="step-circle">1</div>
                         <span className="step-label">로그인 정보</span>
                     </div>
                     <div className="step-line"></div>
+                    
                     <div className={`step-item ${step >= 2 ? 'active' : ''}`}>
                         <div className="step-circle">2</div>
                         <span className="step-label">프로필 설정</span>
                     </div>
                     <div className="step-line"></div>
+                    
                     <div className={`step-item ${step >= 3 ? 'active' : ''}`}>
                         <div className="step-circle">3</div>
                         <span className="step-label">기술 스택</span>
                     </div>
                 </div>
+                
+                {/* 스텝별 영역 렌더링 호출 */}
                 {step === 1 && renderStep1()}
                 {step === 2 && renderStep2()}
                 {step === 3 && renderStep3()}
