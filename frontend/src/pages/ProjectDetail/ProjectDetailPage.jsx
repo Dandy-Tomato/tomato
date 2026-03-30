@@ -223,6 +223,7 @@ const ProjectDetailPage = () => {
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [selectedTopicId, setSelectedTopicId] = useState(null);
     const [topicDetail, setTopicDetail] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
     const [localBookmarks, setLocalBookmarks] = useState(() => {
         try {
             return new Set(JSON.parse(localStorage.getItem(`local_bookmarks_${projectId}`) || '[]'));
@@ -762,13 +763,13 @@ const ProjectDetailPage = () => {
                     <aside className="recommend-sidebar">
                         <div
                             className={`sidebar-item ${activeTab === '추천 주제' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('추천 주제'); setSelectedTopicId(null); }}
+                            onClick={() => { setActiveTab('추천 주제'); setSelectedTopicId(null); setCurrentPage(1); }}
                         >
                             <MdAutoAwesome className="s-icon" /> 추천 주제
                         </div>
                         <div
                             className={`sidebar-item ${activeTab === '북마크' ? 'active' : ''}`}
-                            onClick={() => { setActiveTab('북마크'); setSelectedTopicId(null); }}
+                            onClick={() => { setActiveTab('북마크'); setSelectedTopicId(null); setCurrentPage(1); }}
                         >
                             <MdBookmarkBorder className="s-icon" /> 북마크
                         </div>
@@ -790,6 +791,14 @@ const ProjectDetailPage = () => {
                                     ? recommendations.filter(isMarkedTopic)
                                     : recommendations;
 
+                                // 한 페이지에 21개씩 보여주기 위한 페이지네이션 로직
+                                const ITEMS_PER_PAGE = 21;
+                                const totalPages = Math.ceil(displayRecommendations.length / ITEMS_PER_PAGE) || 1;
+                                const paginatedRecommendations = displayRecommendations.slice(
+                                    (currentPage - 1) * ITEMS_PER_PAGE,
+                                    currentPage * ITEMS_PER_PAGE
+                                );
+
                                 return (
                                     <>
                                         <div className="recommend-header">
@@ -802,7 +811,7 @@ const ProjectDetailPage = () => {
                                             </div>
                                         ) : (
                                             <div className="topic-grid">
-                                                {displayRecommendations.map(topic => {
+                                                {paginatedRecommendations.map(topic => {
                                                     const isMarked = isMarkedTopic(topic);
 
                                                     return (
@@ -836,6 +845,35 @@ const ProjectDetailPage = () => {
                                                         </div>
                                                     );
                                                 })}
+                                            </div>
+                                        )}
+
+                                        {/* 커스텀 페이지네이션 컨트롤러 렌더링 */}
+                                        {displayRecommendations.length > 0 && totalPages > 1 && (
+                                            <div className="pagination-container" style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '8px' }}>
+                                                <button 
+                                                    disabled={currentPage === 1} 
+                                                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                    style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', background: currentPage === 1 ? '#f5f5f5' : 'white', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', color: currentPage === 1 ? '#999' : '#333' }}
+                                                >
+                                                    이전
+                                                </button>
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                                    <button 
+                                                        key={page} 
+                                                        onClick={() => setCurrentPage(page)}
+                                                        style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', background: currentPage === page ? '#E57358' : 'white', color: currentPage === page ? 'white' : '#333', cursor: 'pointer', fontWeight: currentPage === page ? 'bold' : 'normal' }}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                ))}
+                                                <button 
+                                                    disabled={currentPage === totalPages} 
+                                                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                                    style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '4px', background: currentPage === totalPages ? '#f5f5f5' : 'white', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', color: currentPage === totalPages ? '#999' : '#333' }}
+                                                >
+                                                    다음
+                                                </button>
                                             </div>
                                         )}
 
