@@ -17,6 +17,9 @@ import site.to_mato.common.exception.ErrorCode;
 import site.to_mato.common.security.jwt.JwtTokenProvider;
 import site.to_mato.company.entity.Company;
 import site.to_mato.company.repository.CompanyRepository;
+import site.to_mato.project.entity.Project;
+import site.to_mato.project.repository.ProjectMemberRepository;
+import site.to_mato.project.service.ProjectProfileService;
 import site.to_mato.user.entity.User;
 import site.to_mato.user.entity.UserDesiredCompany;
 import site.to_mato.user.entity.UserSkill;
@@ -35,6 +38,8 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final PositionRepository positionRepository;
     private final UserSkillRepository userSkillRepository;
+    private final ProjectProfileService projectProfileService;
+    private final ProjectMemberRepository projectMemberRepository;
     private final UserDesiredCompanyRepository userDesiredCompanyRepository;
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -62,6 +67,12 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        List<Project> projects = projectMemberRepository.findProjectsByUserId(userId);
+
+        for (Project project : projects) {
+            projectProfileService.removeMemberProfile(project, user);
+        }
+
         Position position = null;
         if (req.positionId() != null) {
             position = positionRepository.findById(req.positionId())
@@ -86,6 +97,10 @@ public class AuthService {
 
         if (req.skillIds() != null && !req.skillIds().isEmpty()) {
             saveUserSkills(user, req.skillIds());
+        }
+
+        for (Project project : projects) {
+            projectProfileService.addMemberProfile(project, user);
         }
     }
 

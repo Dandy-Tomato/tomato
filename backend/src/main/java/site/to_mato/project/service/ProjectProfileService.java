@@ -10,6 +10,7 @@ import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectDomain;
 import site.to_mato.project.entity.ProjectSkill;
 import site.to_mato.project.repository.ProjectDomainRepository;
+import site.to_mato.project.repository.ProjectMemberRepository;
 import site.to_mato.project.repository.ProjectSkillRepository;
 import site.to_mato.user.entity.User;
 import site.to_mato.user.entity.UserSkill;
@@ -32,6 +33,7 @@ public class ProjectProfileService {
     private final CompanySkillRepository companySkillRepository;
     private final ProjectSkillRepository projectSkillRepository;
     private final ProjectDomainRepository projectDomainRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final UserSkillRepository userSkillRepository;
     private final UserDesiredCompanyRepository userDesiredCompanyRepository;
 
@@ -62,6 +64,18 @@ public class ProjectProfileService {
     public void replaceSelectedProfile(Project project, List<Skill> selectedSkills, List<Domain> selectedDomains) {
         replaceSelectedSkills(project, selectedSkills);
         replaceSelectedDomains(project, selectedDomains);
+    }
+
+    @Transactional
+    public void refreshProjectProfile(Project project) {
+        List<User> members = projectMemberRepository.findUsersByProjectId(project.getId());
+
+        for (User member : members) {
+            removeMemberProfile(project, member);
+        }
+        for (User member : members) {
+            addMemberProfile(project, member);
+        }
     }
 
     private void addUserSkills(Project project, Long userId) {

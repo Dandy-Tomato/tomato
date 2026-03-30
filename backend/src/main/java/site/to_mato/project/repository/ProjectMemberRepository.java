@@ -5,7 +5,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import site.to_mato.project.entity.Project;
 import site.to_mato.project.entity.ProjectMember;
+import site.to_mato.user.entity.User;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,4 +41,18 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
                   AND pm.user.deletedAt IS NULL
             """)
     List<ProjectMember> findAllWithUserByProjectId(Long projectId);
+
+    @Query("""
+                select pm.project
+                from ProjectMember pm
+                where pm.user.id = :userId
+            """)
+    List<Project> findProjectsByUserId(@Param("userId") Long userId);
+
+    @Query("""
+                select pm.user
+                from ProjectMember pm
+                where pm.project.id = :projectId
+            """)
+    List<User> findUsersByProjectId(@Param("projectId") Long projectId);
 }
