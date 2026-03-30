@@ -22,7 +22,9 @@ public class OAuthUserService {
                 .findByProviderAndProviderUserId(userInfo.getProvider(), userInfo.getProviderUserId())
                 .map(OAuthAccount::getUser)
                 .orElseGet(() -> {
-                    User user = userRepository.save(User.createSocial(userInfo.getEmail()));
+                    User user = userRepository.findByEmail(userInfo.getEmail())
+                            .orElseGet(() -> userRepository.save(User.createSocial(userInfo.getEmail())));
+
                     OAuthAccount oAuthAccount = OAuthAccount.of(
                             user,
                             userInfo.getProvider(),
