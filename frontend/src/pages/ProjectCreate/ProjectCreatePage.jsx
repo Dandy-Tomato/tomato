@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import Navbar from '../../components/common/Navbar';
 import './ProjectCreatePage.css';
-import { SKILLS, DOMAINS } from './constants';
+import { SKILLS, DOMAINS } from '../../constants';
 import { MdFolder, MdEdit, MdHandyman, MdShoppingBag, MdCalendarMonth, MdExpandMore } from 'react-icons/md';
-import AlertModal from './components/AlertModal';
+import AlertModal from '../../components/common/AlertModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+/**
+ * 새 프로젝트를 생성하거나 기존 프로젝트의 정보를 수정하는 페이지 컴포넌트입니다.
+ * 프로젝트명, 설명, 모집 기간, 요구 기수 및 도메인 등을 입력 가능합니다.
+ */
 const ProjectCreatePage = () => {
     const navigate = useNavigate();
     const queryParams = new URLSearchParams(window.location.search);

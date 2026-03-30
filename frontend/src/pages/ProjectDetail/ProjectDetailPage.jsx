@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Navbar from './components/Navbar';
+import Navbar from '../../components/common/Navbar';
 import './ProjectDetailPage.css';
-import { SKILLS, DOMAINS, POSITIONS } from './constants';
+import { SKILLS, DOMAINS, POSITIONS } from '../../constants';
 import {
     MdEdit, MdContentCopy, MdKeyboardArrowDown, MdKeyboardArrowUp,
     MdAutoAwesome, MdSearch, MdBookmarkBorder, MdBookmark,
     MdAdd, MdPeopleOutline, MdPersonAdd, MdThumbUp, MdThumbDown,
     MdArrowBack, MdRefresh, MdLightbulbOutline
 } from 'react-icons/md';
-import AlertModal from './components/AlertModal';
+import AlertModal from '../../components/common/AlertModal';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm'
+import remarkGfm from 'remark-gfm';
 
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
@@ -22,7 +22,10 @@ const REFINE_OPTIONS = [
     { label: '포트폴리오형', value: 'PORTFOLIO_IMPACT' }
 ];
 
-// 주제 상세 보기 컴포넌트
+/**
+ * 특정 프로젝트 내에서 생성된 추천 주제(Topic)의 상세 내역을 표기하는 하위 컴포넌트입니다.
+ * 개별 주제에 반응(좋아요, 싫어요), 북마크, AI를 통한 구체화 기능을 제공합니다.
+ */
 const TopicDetailView = ({
     topic,
     isLoading,
@@ -205,6 +208,10 @@ const TopicDetailView = ({
 };
 
 
+/**
+ * 개별 프로젝트 상세 내용을 조회하고, AI가 제안한 주제 목록을 확인하는 메인 페이지 컴포넌트입니다.
+ * 북마크한 주제 및 선택한 주제의 상세 정보를 모달이나 별도 레이어가 아닌 한 화면 안에 구성하여 보여줍니다.
+ */
 const ProjectDetailPage = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();

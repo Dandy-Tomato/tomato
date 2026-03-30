@@ -1,4 +1,9 @@
-// Positions Mapping (Actual Backend IDs)
+/**
+ * 프론트엔드 전체에서 공통으로 사용되는 상수(Constant) 데이터를 정의합니다.
+ * 백엔드 데이터베이스의 실제 ID와 매핑되어 사용됩니다.
+ */
+
+// 포지션(직무) 매핑 데이터
 export const POSITIONS = [
     { id: 1, name: 'Frontend', dbName: 'frontend', icon: '💻' },
     { id: 2, name: 'Backend', dbName: 'backend', icon: '🗄️' },
@@ -9,7 +14,7 @@ export const POSITIONS = [
     { id: 7, name: 'Product', dbName: 'product', icon: '📦' },
 ];
 
-// Skills Mapping (Actual Backend IDs)
+// 기술 스택(Skills) 매핑 데이터
 export const SKILLS = [
     { id: 1, name: 'API' },
     { id: 2, name: 'ASP.NET' },
@@ -131,6 +136,7 @@ export const SKILLS = [
     { id: 118, name: 'Arduino' },
 ];
 
+// 서비스 도메인(산업 분야) 매핑 데이터
 export const DOMAINS = [
     { id: 10001, name: '서비스', dbName: 'service' },
     { id: 10002, name: '금융·은행', dbName: 'finance' },
@@ -144,5 +150,3 @@ export const DOMAINS = [
     { id: 10010, name: '문화·예술·디자인', dbName: 'culture' },
     { id: 10011, name: '기관·협회', dbName: 'institution' },
 ];
-
-
