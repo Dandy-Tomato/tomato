@@ -13,7 +13,6 @@ public class Domain {
 
     @Id
     @Column(name = "domain_id")
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "name", nullable = false, unique = true)

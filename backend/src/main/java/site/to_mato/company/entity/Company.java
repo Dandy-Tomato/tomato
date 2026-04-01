@@ -18,7 +18,6 @@ import java.util.List;
 public class Company extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "company_id")
     private Long id;
 
