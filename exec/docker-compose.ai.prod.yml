@@ -1,0 +1,30 @@
+services:
+  ai-api:
+    image: ${AI_IMAGE}
+    container_name: tomato-ai-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    expose:
+      - "8000"
+    networks:
+      - tomato-net
+
+  ai-consumer:
+    image: ${AI_IMAGE}
+    container_name: tomato-ai-consumer
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+    command: ["python", "-m", "app.consumer.recommendation_event_consumer"]
+    networks:
+      - tomato-net
+
+networks:
+  tomato-net:
+    external: true

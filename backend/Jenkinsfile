@@ -1,0 +1,489 @@
+import groovy.json.JsonOutput
+
+/*
+ * =========================
+ * Mattermost 알림용 헬퍼 함수
+ * =========================
+ */
+
+/*
+ * GitLab 저장소 URL과 커밋 SHA를 이용해서
+ * 커밋 상세 페이지 URL을 만듦
+ */
+def buildGitCommitUrl(String gitUrl, String commitSha) {
+    if (!gitUrl?.trim() || !commitSha?.trim()) {
+        return ''
+    }
+
+    def base = gitUrl.trim().replaceAll(/\.git$/, '')
+    return "${base}/-/commit/${commitSha}"
+}
+
+/*
+ * 알림용 브랜치명 해석
+ * 우선순위:
+ * 1) 미리 env에 캐시한 값
+ * 2) Jenkins 기본 환경변수
+ * 3) git 명령
+ */
+def resolveBranch() {
+    def cached = env.PIPELINE_BRANCH?.trim()
+    if (cached && cached != 'HEAD') return cached
+
+    if (env.BRANCH_NAME?.trim()) return env.BRANCH_NAME.trim()
+
+    if (env.GIT_LOCAL_BRANCH?.trim()) return env.GIT_LOCAL_BRANCH.trim()
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
+    }
+
+    try {
+        if (fileExists('.git')) {
+            def symbolic = sh(
+                script: "git symbolic-ref --short -q HEAD || true",
+                returnStdout: true
+            ).trim()
+            if (symbolic) return symbolic
+        }
+    } catch (Exception e) {
+        echo "⚠️ 브랜치 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'unknown'
+}
+
+/*
+ * 알림용 작성자/푸셔 정보 해석
+ * GitLab webhook 환경변수(GIT_PUSHER_USERNAME)가 있으면 우선 사용하고,
+ * 없으면 마지막 커밋 작성자를 사용
+ */
+def resolvePusherMention() {
+    def cached = env.PIPELINE_MENTION?.trim()
+    if (cached) return cached
+
+    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+    if (pusher) {
+        return "@${pusher}"
+    }
+
+    try {
+        if (fileExists('.git')) {
+            return sh(
+                script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                returnStdout: true
+            ).trim()
+        }
+    } catch (Exception e) {
+        echo "⚠️ 작성자 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'Unknown'
+}
+
+/*
+ * Mattermost 알림 전송 함수
+ *
+ * success = true  -> 성공 알림
+ * success = false -> 실패 알림
+ */
+def sendMMNotify(boolean success, Map info) {
+    def titleLine = success
+        ? "## :jenkins1: 백엔드 CI/CD :_successs2: :happy_cat:"
+        : "## :jenkins5: 백엔드 CI/CD :sang_fail: :omgham:"
+
+    def lines = []
+
+    if (info.mention) {
+        lines << "**작성자**: ${info.mention}"
+    }
+
+    if (info.branch) {
+        lines << "**브랜치**: `${info.branch}`"
+    }
+
+    if (info.image) {
+        lines << "**이미지**: `${info.image}`"
+    }
+
+    if (info.server) {
+        lines << "**배포 서버**: `${info.server}`"
+    }
+
+    if (info.stage) {
+        lines << "**실패/현재 단계**: `${info.stage}`"
+    }
+
+    if (info.commit?.msg) {
+        def commitLine = info.commit?.url
+            ? "[${info.commit.msg}](${info.commit.url})"
+            : info.commit.msg
+        lines << "**커밋**: ${commitLine}"
+    }
+
+    if (info.buildUrl) {
+        lines << "**빌드 상세**: [Details](${info.buildUrl})"
+    }
+
+    def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
+
+    writeFile(
+        file: 'payload.json',
+        text: JsonOutput.toJson([
+            text      : text,
+            username  : "Jenkins",
+            icon_emoji: ":rocket:"
+        ])
+    )
+
+    withCredentials([string(credentialsId: 'mattermost-webhook', variable: 'MM_WEBHOOK')]) {
+        sh '''
+            curl -sS -f -X POST \
+              -H 'Content-Type: application/json' \
+              --data-binary @payload.json \
+              "$MM_WEBHOOK" || true
+        '''
+    }
+}
+
+def detectBranch() {
+    if (env.BRANCH_NAME?.trim()) {
+        return env.BRANCH_NAME.trim()
+    }
+
+    if (env.GIT_LOCAL_BRANCH?.trim()) {
+        return env.GIT_LOCAL_BRANCH.trim()
+    }
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
+    }
+
+    if (fileExists('.git')) {
+        def symbolic = sh(
+            script: "git symbolic-ref --short -q HEAD || true",
+            returnStdout: true
+        ).trim()
+
+        if (symbolic) {
+            return symbolic
+        }
+
+        def remoteBranch = sh(
+            script: "git branch -r --contains HEAD | sed 's/^ *//' | head -n 1 || true",
+            returnStdout: true
+        ).trim()
+
+        if (remoteBranch) {
+            return remoteBranch.replaceFirst(/^origin\//, '')
+        }
+    }
+
+    return 'unknown'
+}
+
+def markStage(String stageName) {
+    env.LAST_STAGE = stageName
+    echo "[STAGE] LAST_STAGE = ${env.LAST_STAGE}"
+}
+
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        APP_DIR         = 'backend'
+        GIT_URL         = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
+        CHECKOUT_BRANCH = '*/develop'
+
+        DOCKER_IMAGE    = 'nnnnnara/tomato-backend'
+
+        EC2_HOST        = 'to-mato.site'
+        EC2_USER        = 'ubuntu'
+        DEPLOY_DIR      = '/home/ubuntu/tomato'
+        COMPOSE_FILE    = 'docker-compose.prod.yml'
+
+        HEALTHCHECK_URL = 'http://localhost/health'
+    }
+
+    stages {
+        stage('Check Build Environment') {
+            steps {
+                script {
+                    markStage('Check Build Environment')
+                }
+                sh '''
+                    set -eux
+                    whoami
+                    echo "PATH=$PATH"
+                    echo "JAVA_HOME=${JAVA_HOME:-}"
+                    /opt/java/openjdk/bin/java -version
+                    command -v docker
+                    docker --version
+                    ls -l /var/run/docker.sock || true
+                '''
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                script {
+                    markStage('Checkout')
+                }
+                deleteDir()
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: env.CHECKOUT_BRANCH]],
+                    userRemoteConfigs: [[
+                        url: env.GIT_URL,
+                        credentialsId: 'gitlab-http-creds'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Collect Build Metadata') {
+            steps {
+                script {
+                    markStage('Collect Build Metadata')
+
+                    env.PIPELINE_BRANCH = detectBranch()
+
+                    env.PIPELINE_COMMIT_SHA = sh(
+                        script: "git rev-parse HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    env.PIPELINE_COMMIT_MSG = sh(
+                        script: "git log -1 --pretty=%s",
+                        returnStdout: true
+                    ).trim()
+
+                    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+                    if (pusher) {
+                        env.PIPELINE_MENTION = "@${pusher}"
+                    } else {
+                        env.PIPELINE_MENTION = sh(
+                            script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    env.PIPELINE_COMMIT_URL = buildGitCommitUrl(env.GIT_URL, env.PIPELINE_COMMIT_SHA)
+
+                    echo "Collected metadata:"
+                    echo "- branch: ${env.PIPELINE_BRANCH}"
+                    echo "- commit: ${env.PIPELINE_COMMIT_SHA}"
+                    echo "- mention: ${env.PIPELINE_MENTION}"
+                }
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                script {
+                    markStage('Build Backend')
+                }
+                dir("${env.APP_DIR}") {
+                    sh '''
+                        set -eux
+
+                        export JAVA_HOME=/opt/java/openjdk
+                        export PATH="$JAVA_HOME/bin:$PATH"
+
+                        mkdir -p ~/.gradle
+                        cat > ~/.gradle/gradle.properties <<'EOF'
+org.gradle.java.installations.auto-detect=false
+org.gradle.java.installations.paths=/opt/java/openjdk
+EOF
+
+                        chmod +x gradlew
+
+                        ./gradlew clean bootJar -x test --no-daemon --stacktrace
+
+                        test -d build/libs
+                        test -n "$(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' -print -quit)"
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    markStage('Docker Build')
+                }
+                dir("${env.APP_DIR}") {
+                    sh '''
+                        set -eux
+                        ls -al build/libs
+                        find build/libs -maxdepth 1 -type f -name '*.jar' | sort
+
+                        docker build \
+                          -t ${DOCKER_IMAGE}:latest \
+                          -t ${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                          .
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                script {
+                    markStage('Docker Push')
+                }
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKERHUB_USERNAME',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        set -eux
+                        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+                        docker push ${DOCKER_IMAGE}:latest
+                        docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                script {
+                    markStage('Deploy to EC2')
+                }
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh("""
+                        set -eux
+
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
+cd ${DEPLOY_DIR}
+
+if [ ! -f .env ]; then
+  echo "[ERROR] ${DEPLOY_DIR}/.env not found"
+  exit 1
+fi
+
+if grep -q '^BACKEND_IMAGE=' .env; then
+  sed -i 's|^BACKEND_IMAGE=.*|BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER}|' .env
+else
+  echo 'BACKEND_IMAGE=${DOCKER_IMAGE}:${BUILD_NUMBER}' >> .env
+fi
+
+echo '[INFO] Current BACKEND_IMAGE in .env'
+grep '^BACKEND_IMAGE=' .env
+
+echo '[INFO] Pull new backend image'
+docker compose --env-file .env -f ${COMPOSE_FILE} pull backend
+
+echo '[INFO] Recreate backend container'
+docker compose --env-file .env -f ${COMPOSE_FILE} up -d --force-recreate backend
+
+echo '[INFO] Remove dangling images'
+docker image prune -f
+REMOTE_SCRIPT
+                    """.stripIndent())
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+            steps {
+                script {
+                    markStage('Verify Deployment')
+                }
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh("""
+                        set -eux
+
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} 'bash -se' <<'REMOTE_SCRIPT'
+cd ${DEPLOY_DIR}
+
+echo '[INFO] Compose status'
+docker compose --env-file .env -f ${COMPOSE_FILE} ps
+
+echo '[INFO] Wait for application startup'
+MAX_RETRIES=24
+SLEEP_SECONDS=5
+COUNT=1
+TOTAL_WAIT=\$((MAX_RETRIES * SLEEP_SECONDS))
+
+until curl -fsS ${HEALTHCHECK_URL}; do
+  if [ \$COUNT -ge \$MAX_RETRIES ]; then
+    echo "[ERROR] Health check failed after \${TOTAL_WAIT} seconds"
+    echo '[INFO] Backend recent logs'
+    docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=200 backend
+    exit 1
+  fi
+
+  echo "[INFO] Health check failed. Retry \${COUNT}/\${MAX_RETRIES} after \${SLEEP_SECONDS}s..."
+  COUNT=\$((COUNT + 1))
+  sleep \${SLEEP_SECONDS}
+done
+
+echo '[INFO] Health check passed'
+echo '[INFO] Backend recent logs'
+docker compose --env-file .env -f ${COMPOSE_FILE} logs --tail=100 backend
+REMOTE_SCRIPT
+                    """.stripIndent())
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE,
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ]
+                ]
+
+                echo 'CI/CD pipeline succeeded.'
+                sendMMNotify(true, buildInfo)
+            }
+        }
+
+        failure {
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE?.trim() ?: 'START',
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ],
+                    details : "최근 콘솔 로그 자동 첨부는 Jenkins Script Security 승인 이슈 때문에 비활성화했습니다. 빌드 상세 링크에서 실패 원인을 확인하세요."
+                ]
+
+                echo 'CI/CD pipeline failed.'
+                sendMMNotify(false, buildInfo)
+            }
+        }
+
+        always {
+            deleteDir()
+        }
+    }
+}

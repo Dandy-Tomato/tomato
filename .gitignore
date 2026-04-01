@@ -30,8 +30,8 @@ logs/
 ################################
 # Backend - Spring Boot (Secrets)
 ################################
-backend/to-mato/src/main/resources/application*.yml
-backend/to-mato/src/main/resources/application*.properties
+backend/src/main/resources/application*.yml
+backend/src/main/resources/application*.properties
 
 ################################
 # STS / Eclipse
@@ -43,6 +43,18 @@ backend/to-mato/src/main/resources/application*.properties
 .settings/
 .springBeans
 .sts4-cache/
+
+################################
+# Crawler
+################################
+crawler/data/**/raw/
+crawler/data/**/incremental_output/
+crawler/data/**/processed/
+crawler/*.lock
+crawler/.venv/
+crawler/venv/
+crawler/__pycache__/
+crawler/**/*.pyc
 
 ################################
 # AI - Python / FastAPI
@@ -70,4 +82,4 @@ postgres-data/
 ################################
 # Keep Gradle Wrapper
 ################################
-!backend/to-mato/gradle/wrapper/gradle-wrapper.jar
+!backend/gradle/wrapper/gradle-wrapper.jar

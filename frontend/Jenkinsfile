@@ -1,0 +1,345 @@
+import groovy.json.JsonOutput
+
+def buildGitCommitUrl(String gitUrl, String commitSha) {
+    if (!gitUrl?.trim() || !commitSha?.trim()) {
+        return ''
+    }
+
+    def base = gitUrl.trim().replaceAll(/\.git$/, '')
+    return "${base}/-/commit/${commitSha}"
+}
+
+def resolveBranch() {
+    def cached = env.PIPELINE_BRANCH?.trim()
+    if (cached && cached != 'HEAD') return cached
+
+    if (env.BRANCH_NAME?.trim()) return env.BRANCH_NAME.trim()
+
+    if (env.GIT_LOCAL_BRANCH?.trim()) return env.GIT_LOCAL_BRANCH.trim()
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
+    }
+
+    try {
+        if (fileExists('.git')) {
+            def symbolic = sh(
+                script: "git symbolic-ref --short -q HEAD || true",
+                returnStdout: true
+            ).trim()
+            if (symbolic) return symbolic
+        }
+    } catch (Exception e) {
+        echo "⚠️ 브랜치 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'unknown'
+}
+
+def resolvePusherMention() {
+    def cached = env.PIPELINE_MENTION?.trim()
+    if (cached) return cached
+
+    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+    if (pusher) {
+        return "@${pusher}"
+    }
+
+    try {
+        if (fileExists('.git')) {
+            return sh(
+                script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                returnStdout: true
+            ).trim()
+        }
+    } catch (Exception e) {
+        echo "⚠️ 작성자 정보를 가져오지 못했습니다: ${e.message}"
+    }
+
+    return 'Unknown'
+}
+
+def sendMMNotify(boolean success, Map info) {
+    def titleLine = success
+        ? "## :jenkins1: 프론트엔드 CI/CD :_successs2: :happy_cat:"
+        : "## :jenkins5: 프론트엔드 CI/CD :sang_fail: :omgham:"
+
+    def lines = []
+
+    if (info.mention) {
+        lines << "**작성자**: ${info.mention}"
+    }
+
+    if (info.branch) {
+        lines << "**브랜치**: `${info.branch}`"
+    }
+
+    if (info.image) {
+        lines << "**이미지**: `${info.image}`"
+    }
+
+    if (info.server) {
+        lines << "**배포 서버**: `${info.server}`"
+    }
+
+    if (info.stage) {
+        lines << "**실패/현재 단계**: `${info.stage}`"
+    }
+
+    if (info.commit?.msg) {
+        def commitLine = info.commit?.url
+            ? "[${info.commit.msg}](${info.commit.url})"
+            : info.commit.msg
+        lines << "**커밋**: ${commitLine}"
+    }
+
+    if (info.buildUrl) {
+        lines << "**빌드 상세**: [Details](${info.buildUrl})"
+    }
+
+    def text = "${titleLine}\n" + (lines ? ("\n" + lines.join("\n")) : "")
+
+    writeFile(
+        file: 'payload.json',
+        text: JsonOutput.toJson([
+            text      : text,
+            username  : "Jenkins",
+            icon_emoji: ":rocket:"
+        ])
+    )
+
+    withCredentials([string(credentialsId: 'mattermost-webhook', variable: 'MM_WEBHOOK')]) {
+        sh '''
+            curl -sS -f -X POST \
+              -H 'Content-Type: application/json' \
+              --data-binary @payload.json \
+              "$MM_WEBHOOK" || true
+        '''
+    }
+}
+
+def detectBranch() {
+    if (env.BRANCH_NAME?.trim()) {
+        return env.BRANCH_NAME.trim()
+    }
+
+    if (env.GIT_LOCAL_BRANCH?.trim()) {
+        return env.GIT_LOCAL_BRANCH.trim()
+    }
+
+    if (env.GIT_BRANCH?.trim()) {
+        return env.GIT_BRANCH.replaceFirst(/^origin\//, '').trim()
+    }
+
+    if (fileExists('.git')) {
+        def symbolic = sh(
+            script: "git symbolic-ref --short -q HEAD || true",
+            returnStdout: true
+        ).trim()
+
+        if (symbolic) {
+            return symbolic
+        }
+
+        def remoteBranch = sh(
+            script: "git branch -r --contains HEAD | sed 's/^ *//' | head -n 1 || true",
+            returnStdout: true
+        ).trim()
+
+        if (remoteBranch) {
+            return remoteBranch.replaceFirst(/^origin\//, '')
+        }
+    }
+
+    return 'unknown'
+}
+
+def markStage(String stageName) {
+    env.LAST_STAGE = stageName
+    echo "[STAGE] LAST_STAGE = ${env.LAST_STAGE}"
+}
+
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        skipDefaultCheckout(true)
+    }
+
+    environment {
+        APP_DIR = 'frontend'
+        GIT_URL         = 'https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A508.git'
+        CHECKOUT_BRANCH = '*/develop'
+
+        DOCKER_IMAGE = 'nnnnnara/tomato-frontend'
+        DOCKER_TAG = "${env.BUILD_NUMBER}"
+        DEPLOY_DIR = '/home/ubuntu/tomato'
+        COMPOSE_FILE = 'docker-compose.prod.yml'
+        EC2_HOST = 'j14a508.p.ssafy.io'
+        EC2_USER = 'ubuntu'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    markStage('Checkout')
+                }
+                checkout scm
+                sh '''
+                    echo "=== repo root ==="
+                    pwd
+                    ls -al
+                    echo "=== frontend ==="
+                    ls -al ${APP_DIR}
+                '''
+            }
+        }
+
+        stage('Collect Build Metadata') {
+            steps {
+                script {
+                    markStage('Collect Build Metadata')
+
+                    env.PIPELINE_BRANCH = detectBranch()
+
+                    env.PIPELINE_COMMIT_SHA = sh(
+                        script: "git rev-parse HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    env.PIPELINE_COMMIT_MSG = sh(
+                        script: "git log -1 --pretty=%s",
+                        returnStdout: true
+                    ).trim()
+
+                    def pusher = env.GIT_PUSHER_USERNAME?.trim()
+                    if (pusher) {
+                        env.PIPELINE_MENTION = "@${pusher}"
+                    } else {
+                        env.PIPELINE_MENTION = sh(
+                            script: "git --no-pager show -s --format='%an <%ae>' HEAD",
+                            returnStdout: true
+                        ).trim()
+                    }
+
+                    env.PIPELINE_COMMIT_URL = buildGitCommitUrl(env.GIT_URL, env.PIPELINE_COMMIT_SHA)
+
+                    echo "Collected metadata:"
+                    echo "- branch: ${env.PIPELINE_BRANCH}"
+                    echo "- commit: ${env.PIPELINE_COMMIT_SHA}"
+                    echo "- mention: ${env.PIPELINE_MENTION}"
+                }
+            }
+        }
+
+        stage('Prepare Env') {
+            steps {
+                script {
+                    markStage('Prepare Env')
+                }
+                withCredentials([file(credentialsId: 'frontend-env-production', variable: 'ENV_FILE')]) {
+                    sh '''
+                        cp "$ENV_FILE" ${APP_DIR}/.env.production
+                        echo "=== frontend after env copy ==="
+                        ls -al ${APP_DIR}
+                        test -f ${APP_DIR}/.env.production
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                script {
+                    markStage('Docker Build')
+                }
+                dir("${APP_DIR}") {
+                    sh '''
+                        docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                        docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                script {
+                    markStage('Docker Push')
+                }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker push ${DOCKER_IMAGE}:latest
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    markStage('Deploy')
+                }
+                sshagent(credentials: ['ec2-prod-ssh']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
+                            cd ${DEPLOY_DIR} &&
+                            export FRONTEND_IMAGE=${DOCKER_IMAGE}:${DOCKER_TAG} &&
+                            docker compose -f ${COMPOSE_FILE} pull frontend &&
+                            docker compose -f ${COMPOSE_FILE} up -d frontend
+                        "
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE,
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ]
+                ]
+
+                echo 'Frontend CI/CD pipeline succeeded.'
+                sendMMNotify(true, buildInfo)
+            }
+        }
+
+        failure {
+            script {
+                def buildInfo = [
+                    mention : env.PIPELINE_MENTION?.trim() ?: resolvePusherMention(),
+                    branch  : env.PIPELINE_BRANCH?.trim() ?: resolveBranch(),
+                    buildUrl: env.BUILD_URL,
+                    image   : "${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}",
+                    server  : env.EC2_HOST,
+                    stage   : env.LAST_STAGE?.trim() ?: 'START',
+                    commit  : [
+                        msg: env.PIPELINE_COMMIT_MSG?.trim() ?: 'N/A',
+                        url: env.PIPELINE_COMMIT_URL?.trim() ?: ''
+                    ],
+                    details : "최근 콘솔 로그 자동 첨부는 Jenkins Script Security 승인 이슈 때문에 비활성화했습니다. 빌드 상세 링크에서 실패 원인을 확인하세요."
+                ]
+
+                echo 'Frontend CI/CD pipeline failed.'
+                sendMMNotify(false, buildInfo)
+            }
+        }
+    }
+}

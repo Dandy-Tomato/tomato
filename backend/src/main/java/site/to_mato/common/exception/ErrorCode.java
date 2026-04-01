@@ -1,0 +1,77 @@
+package site.to_mato.common.exception;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+
+    // =========================
+    // 1000: COMMON
+    // =========================
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, 1000, "잘못된 요청입니다."),
+    VALIDATION_ERROR(HttpStatus.BAD_REQUEST, 1001, "입력값이 올바르지 않습니다."),
+
+    // =========================
+    // 2000: AUTH
+    // =========================
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, 2000, "인증이 필요합니다."),
+    FORBIDDEN(HttpStatus.FORBIDDEN, 2001, "접근 권한이 없습니다."),
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, 2002, "토큰이 만료되었습니다."),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, 2003, "이메일 또는 비밀번호가 올바르지 않습니다."),
+    REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, 2004, "리프레시 토큰이 유효하지 않습니다."),
+    REFRESH_TOKEN_REVOKED(HttpStatus.UNAUTHORIZED, 2005, "리프레시 토큰이 만료되었거나 폐기되었습니다."),
+    OAUTH_ONLY_ACCOUNT(HttpStatus.BAD_REQUEST, 2006, "소셜 로그인 계정입니다. 소셜 로그인을 이용해주세요."),
+    OAUTH_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, 2007, "지원하지 않는 OAuth Provider입니다."),
+
+    // =========================
+    // 3000: USER
+    // =========================
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, 3000, "존재하지 않는 사용자입니다."),
+    DUPLICATE_USER(HttpStatus.CONFLICT, 3001, "이미 존재하는 사용자입니다."),
+    POSITION_NOT_FOUND(HttpStatus.NOT_FOUND, 3002, "존재하지 않는 직무입니다."),
+    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, 3003, "존재하지 않는 회사입니다."),
+    SKILL_NOT_FOUND(HttpStatus.NOT_FOUND, 3004, "존재하지 않는 기술 스택입니다."),
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, 3005, "존재하지 않는 프로젝트입니다."),
+    DOMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, 3006, "존재하지 않는 도메인입니다."),
+
+    // =========================
+    // 3500: PROJECT
+    // =========================
+    INVALID_PROJECT_DATE_RANGE(HttpStatus.BAD_REQUEST, 3500, "프로젝트 날짜 범위가 올바르지 않습니다."),
+    PROJECT_OWNER_CANNOT_LEAVE(HttpStatus.BAD_REQUEST, 3501, "OWNER는 프로젝트를 나갈 수 없습니다."),
+    INVALID_PROJECT_INVITE_CODE(HttpStatus.BAD_REQUEST, 3502, "유효하지 않은 프로젝트 초대 코드입니다."),
+    ALREADY_JOINED_PROJECT(HttpStatus.BAD_REQUEST, 3503, "이미 참여 중인 프로젝트입니다."),
+    PROJECT_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, 3504, "프로젝트 멤버를 찾을 수 없습니다."),
+    PROJECT_FORBIDDEN(HttpStatus.FORBIDDEN, 3505, "해당 프로젝트에 대한 권한이 없습니다."),
+    CHILD_TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, 3506, "존재하지 않는 하위 주제입니다."),
+    TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, 3507, "존재하지 않는 주제입니다."),
+    NOT_PROJECT_MEMBER(HttpStatus.FORBIDDEN, 3508, "프로젝트에 속한 사용자만 반응할 수 있습니다."),
+
+    // =========================
+    // 4000: TEAM
+    // =========================
+    TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, 4000, "존재하지 않는 팀입니다."),
+    TEAM_FULL(HttpStatus.BAD_REQUEST, 4001, "팀 인원이 가득 찼습니다."),
+
+    // =========================
+    // 5000: RECOMMENDATION
+    // =========================
+    RECOMMENDATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 5000, "추천 생성에 실패했습니다."),
+
+    // =========================
+    // 6000: TEAM INTERACTION
+    // =========================
+    REACTION_CONFLICT(HttpStatus.CONFLICT, 6000, "다른 사용자가 먼저 반응을 변경했습니다."),
+
+    // =========================
+    // 9000: SERVER
+    // =========================
+    INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, 9000, "서버 오류가 발생했습니다.");
+
+    private final HttpStatus status;
+    private final int code;
+    private final String message;
+}

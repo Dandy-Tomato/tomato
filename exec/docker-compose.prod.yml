@@ -1,0 +1,56 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE}
+    container_name: tomato-backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Seoul
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_ADDITIONAL_LOCATION: optional:file:/tomato/config/
+    volumes:
+      - ./config/application-prod.yml:/tomato/config/application-prod.yml:ro
+    expose:
+      - "8080"
+    networks:
+      - tomato-net
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    container_name: tomato-frontend
+    restart: always
+    expose:
+      - "80"
+    networks:
+      - tomato-net
+
+  nginx:
+    image: nginx:latest
+    container_name: tomato-nginx
+    restart: always
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    networks:
+      - tomato-net
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: tomato-certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    networks:
+      - tomato-net
+
+networks:
+  tomato-net:
+    external: true

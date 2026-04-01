@@ -1,0 +1,5 @@
+﻿skill_id,front_name,db_name
+917,SPI,spi
+918,UART,uart
+919,I2C,i2c
+920,FreeRTOS,freertos
