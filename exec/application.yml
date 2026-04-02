@@ -1,0 +1,72 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/tomato
+    username: postgres
+    password: postgres
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        highlight_sql: true
+        jdbc:
+          time_zone: Asia/Seoul
+    show-sql: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+  
+  kafka:
+    bootstrap-servers: kafka:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: '클라이언트 아이디'
+            client-secret: '클라이언트 시크릿'
+            scope:
+              - read:user
+              - user:email
+            redirect-uri: http://api.to-mato.site/login/oauth2/code/github
+          google:
+            client-id: '클라이언트 아이디'
+            client-secret: '클라이언트 시크릿'
+            scope:
+              - profile
+              - email
+            redirect-uri: https://api.to-mato.site/login/oauth2/code/google
+
+jwt:
+  secret: 'jwt 시크릿'
+  header: Authorization
+  prefix: "Bearer "
+  access-token-ttl: PT30M
+  refresh-token-ttl: P7D
+  front-callback-url: https://to-mato.site/oauth/callback
+
+fastapi:
+  url: http://ai-api:8000
+
+openai:
+  api-key: 'openai api 키'
+  model: gpt-4o-mini
+  url: https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions
+
+batch:
+  file:
+    root: S14P21A508/crawler/db_ready/
+    company: companies.csv
+    company-skill: company_skills.csv
+    skill: skills.csv
+  scheduler:
+    company-cron: "00 00 06 * * *"
